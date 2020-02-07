@@ -16,26 +16,27 @@ int tank_app_deinit(tank_app_t *tank_app)
 
 int tank_app_send(tank_app_t *tank_app, const uint8_t* buf, uint32_t size)
 {
-    uint8_t *msg_send = NULL;
+    app_packet_t *msg_send = NULL;
     if(INVALID_POINTER(tank_app)||INVALID_POINTER(buf)){
         goto fail;
     }
-    printf("--------send messgae--------\n");
-    printf("%s\n",buf);
 
-    msg_send = (uint8_t*)malloc(size);
+    msg_send = (app_packet_t*)malloc(sizeof(app_packet_t)+size);
     if(INVALID_POINTER(msg_send)){
         goto fail;
     }
-    memcpy(msg_send, buf, size);
+    msg_send->len = size;
+    msg_send->ID_system_src = SYSTEM_A;
+    msg_send->ID_system_dst = SYSTEM_B;
+    memcpy(msg_send->data, buf, size);
     uint32_t *write_p = &(tank_app->send_buf.write_p);
-
     if(*write_p >= tank_app->send_buf.length){
         *write_p = 0;
     }
-    tank_app->send_buf.buf[*write_p].data_type = BYTE;
-    tank_app->send_buf.buf[*write_p].length = size;
-    tank_app->send_buf.buf[*write_p].buf_p = msg_send;
+    tank_app->send_buf.buf[*write_p] = msg_send;
+    printf("messgae:%s\n",msg_send->data);
+    printf("size:%d\n",msg_send->len);
+    printf("from ID:0x%x to ID:0x%x\n",msg_send->ID_system_src, msg_send->ID_system_dst);
     (*write_p)++;
     return 0;
 fail:

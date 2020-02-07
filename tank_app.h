@@ -1,27 +1,20 @@
 #ifndef __TANK_H__
 #define __TANK_H__
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
+#include "lib_pub.h"
+#include "data_packet.h"
 #define INVALID_POINTER(pointer) (pointer==NULL)
 
-typedef enum{
-BYTE = 0,
-HALFWORD = 1,
-WORD = 2
-}msg_type_t;
 
-typedef struct __msg_buf_t{
-    msg_type_t data_type;
-    uint32_t length;
-    uint8_t *buf_p;
-}msg_buf_t;
+// typedef struct __msg_buf_t{
+//     msg_type_t data_type;
+//     uint32_t length;
+//     uint8_t *buf_p;
+// }msg_buf_t;
 
 struct msg_FIFO{
     uint32_t length;
     uint32_t write_p;
-    msg_buf_t buf[256];
+    app_packet_t* buf[256];
 };
 
 typedef struct __tank_app_t{
