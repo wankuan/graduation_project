@@ -1,5 +1,5 @@
-#ifndef __TANK_H__
-#define __TANK_H__
+#ifndef __TANK_APP_H__
+#define __TANK_APP_H__
 #include "lib_pub.h"
 #include "data_packet.h"
 #define INVALID_POINTER(pointer) (pointer==NULL)
@@ -11,15 +11,24 @@ typedef enum{
     SUCCESS = 1
 }APP_STATUS;
 
-// typedef struct __msg_buf_t{
-//     msg_type_t data_type;
-//     uint32_t length;
-//     uint8_t *buf_p;
-// }msg_buf_t;
 typedef APP_STATUS app_status_t;
 typedef int system_id_t;
 typedef int app_id_t;
 
+typedef enum{
+    SYSTEM_A = 0x01,
+    SYSTEM_B = 0x02,
+    SYSTEM_C = 0x03,
+    SYSTEM_D = 0x04,
+    SYSTEM_E = 0x05,
+}systemID_t;
+
+typedef struct{
+    systemID_t ID_system_src;
+    systemID_t ID_system_dst;
+    len_app_packet_t len;
+    uint8_t data[0];
+}app_packet_t;
 
 typedef struct msg_FIFO{
     uint32_t pop_p;

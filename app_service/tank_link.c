@@ -1,5 +1,7 @@
 #include "tank_link.h"
 
+link_handler_t my_link_handler;
+
 int tank_link_msg_send(void)
 {
     int id = msgget(1232, IPC_CREAT|0666);
