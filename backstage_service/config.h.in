@@ -1,0 +1,10 @@
+#ifndef __CONFIG_H__
+#define __CONFIG_H__
+
+#define PROJECT_VERSION "@VERSION_INTERFACE@"
+#define GIT_ALL "ID:@GIT_COMMIT_ID@\nDate: @GIT_COMMIT_DATE@\nAuthor: @GIT_AUTHOR_EMAIL@\nMessage: @GIT_COMMIT_MESSAGE@\n"
+#define COMPILE_DATE __DATE__
+#define COMPILE_TIME __TIME__
+#define GCC_VERSION __VERSION__
+
+#endif

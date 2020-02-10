@@ -6,7 +6,7 @@
 #include "lib_pub.h"
 #include <errno.h>
 typedef struct _my_msg_t {
-    uint32_t type;
+    long type;
     char string[100];
 } my_msg_t;
 int tank_link_msg_send(void);
