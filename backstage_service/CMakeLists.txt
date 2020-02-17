@@ -10,8 +10,7 @@ set(CMAKE_C_FLAGS "-Wall -fdata-sections -ffunction-sections -g")
 
 SET(SRCS
     main.c
-    tank_app.c
-    tank_link.c
+    shared_memory.c
 )
 
 SET(VERSION_INTERFACE ${VERSION})

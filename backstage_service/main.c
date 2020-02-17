@@ -1,41 +1,61 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <pthread.h>
+#include <unistd.h>
+
 #include "config.h"
-#include "tank_app.h"
-#include "tank_link.h"
+#include "my_sem.h"
 #define TEST_SIZE 257
 
+int sem_id;
+
+
+char message[100]="\0";
+
+void* print1(void *arg)
+{
+    printf("fun1 pid is %ld\n",pthread_self());
+    printf("fun1 getpid is %d\n",getpid());
+    printf("wait for get the message\n");
+    printf("[fun1]current: num:%d\n",get_nsem(sem_id,0));
+    sem_p(sem_id);
+    printf("[fun1]message is %s\n",message);
+    printf("[fun1]current: num:%d\n",get_nsem(sem_id,0));
+    sem_v(sem_id);
+    printf("[fun1]current: num:%d\n",get_nsem(sem_id,0));
+}
+
+
+void* print2(void *arg)
+{
+    printf("fun2 pid is %ld\n",pthread_self());
+    printf("fun2 getpid is %d\n",getpid());
+    printf("after 5 seconds, will wirte into message\n");
+    sleep(5);
+    strncpy(message,"huang wan kuan",100);
+    printf("has written into message, check\n");
+    sem_v(sem_id);
+    printf("[fun2]current: num:%d\n",get_nsem(sem_id,0));
+}
 int main(int argc, char *argv[])
 {
-    printf("Proejct Version:%s\n",PROJECT_VERSION);
+    pthread_t p_pid;
     printf("Compile time:%s %s\n", COMPILE_DATE, COMPILE_TIME);
     printf("GCC version:%s\n", GCC_VERSION);
     printf("--------Git--------\n%s\n",GIT_ALL);
-    // tank_app_t APP;
-    // tank_app_init(&APP);
-    // const char *msg_send = "huang";
-    // char *msg_send_test_buf[TEST_SIZE];
-    // for(uint16_t i = 0; i<TEST_SIZE; i++){
-    //     msg_send_test_buf[i]=(char*)malloc(256);
-    //     snprintf(msg_send_test_buf[i],256,"%s_%d",msg_send,i);
-    //     tank_app_send(&APP, (const uint8_t*)(msg_send_test_buf[i]), (strlen(msg_send_test_buf[i])+sizeof("")));
-    // }
-    // for(uint16_t i = 0; i<TEST_SIZE; i++){
-    //     free(msg_send_test_buf[i]);
-    // }
-    if(argc == 2){
-        if(*argv[1]=='1'){
-            printf("send messgae!\n");
-            tank_link_msg_send();
-        }else if(*argv[1]=='2'){
-            printf("receive message!\n");
-            tank_link_msg_rev();
-        }else{
-            printf("1-send\n2-receive\n");
-        }
-    }
+    printf("process pid is %d\n",getpid());
+    sem_id = my_sem_init(1);
+    printf("current: num:%d\n",get_nsem(sem_id,0));
+    sem_p(sem_id);
+    printf("current: num:%d\n",get_nsem(sem_id,0));
+    pthread_create(&p_pid,NULL,&print1,NULL);
+    pthread_create(&p_pid,NULL,&print2,NULL);
+
+    pthread_join(p_pid,NULL);
+    printf("status:%d\n", rm_sem(sem_id, 0));
     return 0;
 }
 
