@@ -37,3 +37,48 @@ void write_buffer(const char *fmt, ...)
         fclose(file_fp);
     }
 }
+
+       char *
+       make_message(const char *fmt, ...)
+       {
+           int size = 0;
+           char *p = NULL;
+           va_list ap;
+
+           /* Determine required size */
+
+           va_start(ap, fmt);
+           size = vsnprintf(p, size, fmt, ap);
+           va_end(ap);
+            //
+           if (size < 0)
+               return NULL;
+
+           size++;             /* For '\0' */
+           p = malloc(size);
+           if (p == NULL)
+               return NULL;
+
+           va_start(ap, fmt);
+           size = vsnprintf(p, size, fmt, ap);
+           if (size < 0) {
+               free(p);
+               return NULL;
+           }
+           va_end(ap);
+
+           return p;
+       }
+
+char* my_printf(char *fmt,...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    char *buf = malloc(3);
+    int size = 3;
+    printf("before size:%d\n",size);
+    size = vsnprintf(buf, size, fmt, ap);
+    printf("after size:%d\n",size);
+    va_end(ap);
+    return buf;
+}

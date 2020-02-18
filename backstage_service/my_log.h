@@ -10,8 +10,11 @@
 
 void get_current_time(uint8_t *p_timer);
 void write_buffer(const char *fmt, ...);
-
+char *make_message(const char *fmt, ...);
 #define LOG_S(fmt, ...) write_buffer(fmt,__VA_ARGS__)
+
+
+char* my_printf(char *fmt,...);
 
 // #define LOG_S(fmt, ...)\
 //     do{\
