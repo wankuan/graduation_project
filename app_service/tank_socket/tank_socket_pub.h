@@ -37,13 +37,29 @@ typedef enum{
     TS_ACCEPT_NOWAIT
 }ts_accept_type_t;
 
-ts_id_t         ts_socket(ts_protocol_t protocol, ts_type_t type);
-ts_status_t     ts_connect(ts_id_t id, ts_addr_t addr);
-ts_status_t     ts_bind(ts_id_t id, ts_addr_t addr);
-ts_status_t     ts_listen(ts_id_t id, uint16_t max_len);
-ts_id_t         ts_accept(ts_id_t id, ts_addr_t *client_addr, ts_accept_type_t type);
-ts_msg_len_t    ts_read(ts_id_t id, const char *buf, ts_msg_len_t max_len);
-ts_msg_len_t    ts_write(ts_id_t id, char *buf, ts_msg_len_t max_len);
+
+typedef enum{
+    TS_MSG_GROUP_0 = 0,
+    TS_MSG_GROUP_1,
+    TS_MSG_GROUP_2,
+    TS_MSG_GROUP_3,
+    TS_MSG_GROUP_4
+}ts_msg_priority_t;
+typedef struct{
+    uint32_t ts_head_id;
+}ts_head_t;
+typedef struct{
+    ts_head_t head;
+    ts_type_t type;
+    ts_protocol_t protocol;
+    ts_msg_priority_t priority;
+    ts_addr_t src_addr;
+    ts_addr_t dst_addr;
+    ts_msg_len_t len;
+    uint8_t data[0];
+}ts_msg_t;
+
+
 
 
 #endif

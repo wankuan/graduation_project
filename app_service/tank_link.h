@@ -24,7 +24,7 @@ typedef LINK_STATUS link_status_t;
 
 typedef struct {
     transmit_status_t transmit_status;
-    
+
     app_packet_t* app_packet;
 }link_packet_t;
 
