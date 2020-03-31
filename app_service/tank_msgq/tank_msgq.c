@@ -10,9 +10,9 @@ tank_status_t tank_msgq_constructor(void)
 tank_msgq_t *tank_get_msgq_addr(tank_queue_id_t id)
 {
     if(id > TANK_MAX_SIZE){
-        return (tank_msgq_t *)(0);
+        return NULL;
     }
-    return (tank_msgq_t *)msgq_map_s->addr[id];
+    return msgq_map_s->addr[id];
 }
 
 tank_status_t tank_msgq_creat(tank_msgq_t* handler, tank_msgq_len_t len)

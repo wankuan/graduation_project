@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
     printf("%s\n",msgq.buf[0]);
     printf("%s\n",msgq.buf[1]);
     printf("%s\n",msgq.buf[2]);
+    tank_msgq_delete(&msgq);
     return 0;
 }
 
