@@ -30,7 +30,7 @@ typedef enum{
 typedef enum{
     TS_SUCCESS = 0,
     TS_FAIL = 1
-}ts_status_t;
+}tank_status_t;
 
 typedef enum{
     TS_ACCEPT_WAIT = 0,
@@ -38,9 +38,9 @@ typedef enum{
 }ts_accept_type_t;
 
 ts_id_t         ts_socket(ts_protocol_t protocol, ts_type_t type);
-ts_status_t     ts_connect(ts_id_t id, ts_addr_t addr);
-ts_status_t     ts_bind(ts_id_t id, ts_addr_t addr);
-ts_status_t     ts_listen(ts_id_t id, uint16_t max_len);
+tank_status_t     ts_connect(ts_id_t id, ts_addr_t addr);
+tank_status_t     ts_bind(ts_id_t id, ts_addr_t addr);
+tank_status_t     ts_listen(ts_id_t id, uint16_t max_len);
 ts_id_t         ts_accept(ts_id_t id, ts_addr_t *client_addr, ts_accept_type_t type);
 ts_msg_len_t    ts_read(ts_id_t id, const char *buf, ts_msg_len_t max_len);
 ts_msg_len_t    ts_write(ts_id_t id, char *buf, ts_msg_len_t max_len);
