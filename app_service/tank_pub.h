@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#define __LINUX__
 
 #define TANK_MAX_SIZE 256
 
