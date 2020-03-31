@@ -13,7 +13,7 @@ typedef enum{
 }sem_status_t;
 
 #ifdef __LINUX__
-#define my_sem_t sem_t
+typedef sem_t my_sem_t;
 #endif
 
 static int sem_get_id(void);

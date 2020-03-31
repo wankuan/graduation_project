@@ -2,7 +2,7 @@
 #define __TANK_MSGQ_H__
 
 #include "tank_pub.h"
-
+#include "my_sem.h"
 
 
 #define TANK_MSGQ_MAX_SIZE 20
@@ -14,6 +14,7 @@ typedef uint16_t tank_msgq_len_t;
 typedef uint8_t (*msgq_t)[TANK_MSGQ_MAX_SIZE];
 
 typedef struct{
+    my_sem_t sem;
     tank_id_t len;
     tank_id_t head;
     tank_id_t tail;

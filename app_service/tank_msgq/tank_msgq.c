@@ -22,6 +22,7 @@ tank_status_t tank_msgq_creat(tank_msgq_t* handler, tank_msgq_len_t len)
     handler->head = 0;
     handler->tail = 0;
     handler->buf = malloc(len*TANK_MSGQ_MAX_SIZE);
+    my_sem_creat(&handler->sem, 2);
     if(handler->buf == NULL){
         tank_msgq_delete(handler);
         return TANK_FAIL;
@@ -36,6 +37,24 @@ tank_status_t tank_msgq_delete(tank_msgq_t* handler)
 }
 
 
-tank_status_t tank_msgq_recv(tank_msgq_t* handler, uint8_t *msg, uint16_t len);
+tank_status_t tank_msgq_recv(tank_msgq_t* handler, uint8_t *msg, uint16_t len)
+{
+    my_sem_wait(&handler->sem);
+    handler->head += 1;
+    if(handler->head == handler->tail){
+        handler->tail += 1;
+    }
+    memcpy(handler->buf[handler->head-1], msg, len);
+    my_sem_post(&handler->sem);
+}
 tank_status_t tank_msgq_recv_wait(tank_msgq_t* handler, uint8_t *msg, uint16_t len,uint16_t timeout);
-tank_status_t tank_msgq_send(tank_msgq_t* handler, uint8_t *msg, uint16_t len);
+tank_status_t tank_msgq_send(tank_msgq_t* handler, uint8_t *msg, uint16_t len)
+{
+    my_sem_wait(&handler->sem);
+    handler->tail += 1;
+    if(handler->head == handler->tail){
+        handler->tail += 1;
+    }
+    memcpy(handler->buf[handler->head-1], msg, len);
+    my_sem_post(&handler->sem);
+}
