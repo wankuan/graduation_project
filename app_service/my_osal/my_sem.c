@@ -36,7 +36,7 @@ sem_status_t my_sem_wait(my_sem_t *sem)
 }
 sem_status_t my_sem_trywait(my_sem_t *sem)
 {
-
+    return SEM_SUCCESS;
 }
 sem_status_t my_sem_post(my_sem_t *sem)
 {
@@ -56,5 +56,5 @@ sem_status_t my_sem_get_val(my_sem_t *sem, int *val)
 }
 sem_status_t my_sem_set_val(my_sem_t *sem, int val)
 {
-
+    return SEM_SUCCESS;
 }

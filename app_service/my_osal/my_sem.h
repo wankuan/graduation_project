@@ -16,7 +16,6 @@ typedef enum{
 typedef sem_t my_sem_t;
 #endif
 
-static int sem_get_id(void);
 
 sem_status_t my_sem_creat(my_sem_t *sem, uint8_t value);
 sem_status_t my_sem_destroy(my_sem_t *sem);
