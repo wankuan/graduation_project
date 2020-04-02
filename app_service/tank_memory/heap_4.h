@@ -2,8 +2,12 @@
 #define __HEAP_4_H__
 
 #include "tank_pub.h"
-/* Define the linked list structure.  This is used to link free blocks in order
-of their memory address. */
+
+
+#define portBYTE_ALIGNMENT ((uint32_t)8)
+#define portBYTE_ALIGNMENT_MASK ((uint32_t)(portBYTE_ALIGNMENT-1))
+
+
 typedef struct A_BLOCK_LINK
 {
 	struct A_BLOCK_LINK *pxNextFreeBlock;	/*<< The next free block in the list. */
@@ -11,7 +15,7 @@ typedef struct A_BLOCK_LINK
 } BlockLink_t;
 
 typedef struct{
-    BlockLink_t *xStart;
+    BlockLink_t xStart;
     BlockLink_t *pxEnd;
     uint32_t xFreeBytesRemaining;
     uint32_t xMinimumEverFreeBytesRemaining;
@@ -19,6 +23,8 @@ typedef struct{
     uint32_t total_size;
 }heap_info_t;
 
-void *pvPortMalloc(heap_info_t *info, uint32_t xWantedSize);
-void vPortFree(heap_info_t *info, void *pv);
+void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize);
+void vPortFree(heap_info_t *heap, void *pv);
+uint32_t xPortGetFreeHeapSize(heap_info_t *heap);
+uint32_t xPortGetMinimumEverFreeHeapSize( heap_info_t *heap );
 #endif
