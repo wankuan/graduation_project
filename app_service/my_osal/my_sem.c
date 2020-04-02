@@ -1,7 +1,5 @@
 #include "my_sem.h"
 
-
-
 sem_status_t my_sem_creat(my_sem_t *sem, uint8_t value)
 {
     uint8_t flag = 0;

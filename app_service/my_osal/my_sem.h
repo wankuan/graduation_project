@@ -1,5 +1,5 @@
 #ifndef __MY_SEM_H__
-#define __MY_SEM_H___
+#define __MY_SEM_H__
 
 #include "tank_pub.h"
 

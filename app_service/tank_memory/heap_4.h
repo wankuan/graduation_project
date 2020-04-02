@@ -3,10 +3,8 @@
 
 #include "tank_pub.h"
 
-
 #define portBYTE_ALIGNMENT ((uint32_t)8)
 #define portBYTE_ALIGNMENT_MASK ((uint32_t)(portBYTE_ALIGNMENT-1))
-
 
 typedef struct A_BLOCK_LINK
 {
@@ -27,4 +25,5 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize);
 void vPortFree(heap_info_t *heap, void *pv);
 uint32_t xPortGetFreeHeapSize(heap_info_t *heap);
 uint32_t xPortGetMinimumEverFreeHeapSize( heap_info_t *heap );
+
 #endif
