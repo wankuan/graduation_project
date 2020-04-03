@@ -6,6 +6,8 @@
 #define portBYTE_ALIGNMENT ((uint32_t)8)
 #define portBYTE_ALIGNMENT_MASK ((uint32_t)(portBYTE_ALIGNMENT-1))
 
+/* 分配原则  end结构8字节+N*(malloc大小+8) */
+
 typedef struct A_BLOCK_LINK
 {
 	struct A_BLOCK_LINK *pxNextFreeBlock;	/*<< The next free block in the list. */

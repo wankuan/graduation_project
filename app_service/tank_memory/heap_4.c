@@ -69,7 +69,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
     initialisation to setup the list of free blocks. */
     if( heap->pxEnd == NULL )
     {
-        printf("[INFO]first use, heap init\n");
+        // printf("[INFO]first use, heap init\n");
         prvHeapInit(heap);
     }
 
@@ -139,7 +139,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
                 }
                 else
                 {
-                    printf("[INFO]small block appear, can not split, size:%d\n", pxBlock->xBlockSize - xWantedSize);
+                    // printf("[INFO]small block appear, can not split, size:%d\n", pxBlock->xBlockSize - xWantedSize);
                 }
 
                 heap->xFreeBytesRemaining -= pxBlock->xBlockSize;
@@ -147,11 +147,11 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
                 if( heap->xFreeBytesRemaining < heap->xMinimumEverFreeBytesRemaining )
                 {
                     heap->xMinimumEverFreeBytesRemaining = heap->xFreeBytesRemaining;
-                    printf("[INFO]appear new minum free byte remainning, size:%d\n", heap->xMinimumEverFreeBytesRemaining);
+                    // printf("[INFO]appear new minum free byte remainning, size:%d\n", heap->xMinimumEverFreeBytesRemaining);
                 }
                 else
                 {
-                    printf("[INFO]has allocated remain_size:%d\n", heap->xFreeBytesRemaining);
+                    // printf("[INFO]has allocated remain_size:%d\n", heap->xFreeBytesRemaining);
                 }
 
                 /* The block is being returned - it is allocated and owned
@@ -168,7 +168,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
         }
         else
         {
-            printf("[ERROR]size over remain %d\n", heap->xFreeBytesRemaining);
+            printf("[ERROR]size over, remain %d\n", heap->xFreeBytesRemaining - xHeapStructSize);
             return NULL;
         }
     }
@@ -177,7 +177,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
         printf("[ERROR]size over max %d\n", xBlockAllocatedBit);
         return NULL;
     }
-    printf("[INFO]allocated OK return:%p, size:%d\n", pvReturn, xWantedSize);
+    printf("[INFO]allocated OK, return:%p, size:%d\n", pvReturn, xWantedSize-xHeapStructSize);
     return pvReturn;
 }
 /*-----------------------------------------------------------*/
@@ -186,7 +186,7 @@ void vPortFree(heap_info_t *heap, void *pv)
 {
     uint8_t *puc = ( uint8_t * ) pv;
     BlockLink_t *pxLink;
-    printf("[INFO]free start addr:%p\n", puc);
+    // printf("[INFO]free start addr:%p\n", puc);
     if( pv != NULL )
     {
         /* The memory being freed will have an BlockLink_t structure immediately
@@ -231,7 +231,7 @@ void vPortFree(heap_info_t *heap, void *pv)
             printf("[ERROR]size over max %d\n", xBlockAllocatedBit);
         }
     }
-    printf("[INFO]free OK\n");
+    printf("[INFO]free OK, addr:%p\n", pv);
 }
 /*-----------------------------------------------------------*/
 
@@ -294,8 +294,8 @@ static void prvHeapInit(heap_info_t *heap)
     /* Only one block exists - and it covers the entire usable heap space. */
     heap->xMinimumEverFreeBytesRemaining = pxFirstFreeBlock->xBlockSize;
     heap->xFreeBytesRemaining = pxFirstFreeBlock->xBlockSize;
-    printf("xHeapStructSize is %d\n", xHeapStructSize);
-    printf("xFreeBytesRemaining is %d\n", heap->xFreeBytesRemaining );
+    // printf("xHeapStructSize is %d\n", xHeapStructSize);
+    // printf("xFreeBytesRemaining is %d\n", heap->xFreeBytesRemaining );
 }
 /*-----------------------------------------------------------*/
 
@@ -303,7 +303,7 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
 {
     BlockLink_t *pxIterator;
     uint8_t *puc;
-    printf("[INFO]start prvInsertBlockIntoFreeList\n");
+    // printf("[INFO]start prvInsertBlockIntoFreeList\n");
     /* Iterate through the list until a block is found that has a higher address
     than the block being inserted. */
     // 寻找当前要插入的地址位置，空闲块在物理地址上从小到大，插入
@@ -320,11 +320,11 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
     {
         pxIterator->xBlockSize += pxBlockToInsert->xBlockSize;
         pxBlockToInsert = pxIterator;
-        printf("[INFO]the addr continue for last\n");
+        // printf("[INFO]the addr continue for last\n");
     }
     else
     {
-        printf("[INFO]the addr not continue for last\n");
+        // printf("[INFO]the addr not continue for last\n");
     }
 
     /* Do the block being inserted, and the block it is being inserted before
@@ -343,12 +343,12 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
         {
             pxBlockToInsert->pxNextFreeBlock = heap->pxEnd;
         }
-        printf("[INFO]the addr continue for next\n");
+        // printf("[INFO]the addr continue for next\n");
     }
     else
     {
         pxBlockToInsert->pxNextFreeBlock = pxIterator->pxNextFreeBlock;
-        printf("[INFO]the addr not continue for next\n");
+        // printf("[INFO]the addr not continue for next\n");
     }
 
     /* If the block being inserted plugged a gab, so was merged with the block
@@ -359,8 +359,8 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
     if( pxIterator != pxBlockToInsert )
     {
         pxIterator->pxNextFreeBlock = pxBlockToInsert;
-        printf("[INFO]the addr not continue for last/next\n");
+        // printf("[INFO]the addr not continue for last/next\n");
     }
-    printf("[INFO]end prvInsertBlockIntoFreeList\n");
+    // printf("[INFO]end prvInsertBlockIntoFreeList\n");
 }
 
