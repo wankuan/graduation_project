@@ -102,26 +102,26 @@ void *get_mm_start(void)
 void *app_socket_test(void *arg)
 {
     sleep(1);
+    int sem_val = 0;
     my_sem_t *sem_malloc = (my_sem_t *)(start_addr + SEM_ADDR);
     printf("[socket]start send malloc request\n");
+
+    my_sem_get_val(sem_malloc, &sem_val);
+    my_sem_wait(sem_malloc);
+    printf("[socket]wait for backstage allocate finished\n");
+
     sock_get_info_t *sock_get_info = (sock_get_info_t *)(start_addr + MALLOC_ADDR);
     memset(sock_get_info, 0, sizeof(sock_get_info_t));
     strncpy(sock_get_info->name, "sock_1", 8);
     sock_get_info->len = 10;
-
     printf("[socket]name:%s, len:%d\n", sock_get_info->name, sock_get_info->len);
-    int sem_val = 0;
 
     my_sem_get_val(sem_malloc, &sem_val);
     my_sem_wait(sem_malloc);
-
-    printf("[socket]wait for backstage allocate finished\n");
-
-    my_sem_get_val(sem_malloc, &sem_val);
-    while(my_sem_trywait(sem_malloc) != SEM_SUCCESS){
-        sleep(1);
-        my_sem_get_val(sem_malloc, &sem_val);
-    }
+    // while(my_sem_trywait(sem_malloc) != SEM_SUCCESS){
+    //     sleep(1);
+    //     my_sem_get_val(sem_malloc, &sem_val);
+    // }
 
 
     printf("[socket]backstage allocate OK\n");
