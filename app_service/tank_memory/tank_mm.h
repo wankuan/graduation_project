@@ -3,6 +3,9 @@
 #include "tank_pub.h"
 #include "my_sem.h"
 #include "heap_4.h"
+#include <sys/mman.h>
+#include <sys/stat.h>        /* For mode constants */
+#include <fcntl.h>           /* For O_* constants */
 
 typedef struct{
     my_sem_t sem;

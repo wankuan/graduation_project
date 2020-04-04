@@ -34,7 +34,11 @@ sem_status_t my_sem_wait(my_sem_t *sem)
 }
 sem_status_t my_sem_trywait(my_sem_t *sem)
 {
-    return SEM_SUCCESS;
+    if(sem_trywait(sem) == 0){
+        return SEM_SUCCESS;
+    }else{
+        return SEM_FAIL;
+    }
 }
 sem_status_t my_sem_post(my_sem_t *sem)
 {
@@ -47,6 +51,7 @@ sem_status_t my_sem_post(my_sem_t *sem)
 sem_status_t my_sem_get_val(my_sem_t *sem, int *val)
 {
     if(!sem_getvalue(sem, val)){
+        printf("[sem]sem value:%d\n", *val);
         return SEM_SUCCESS;
     }else{
         return SEM_FAIL;

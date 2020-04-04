@@ -6,7 +6,6 @@
 #include <pthread.h>
 
 
-
 typedef struct{
     char name[8];
     uint32_t len;
@@ -47,15 +46,14 @@ void print_all_info(void)
 void *get_mm_start(void)
 {
     const char *name = TANK_PUB_NAME;
-    int fd = shm_open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+    int fd = shm_open(name, O_RDWR, S_IRUSR|S_IWUSR);
     if(fd < 0){
         perror("creat ERROR");
         exit(1);
     }
     printf("fd:%d\n", fd);
     printf("map_size:%d\n", TANK_PUB_SIZE);
-    ftruncate(fd, TANK_PUB_SIZE);
-    void *buf = mmap(NULL, TANK_PUB_SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
+    void *buf = mmap(NULL, TANK_PUB_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
     if (!buf) {
         printf("mmap failed\n");
         close(fd);
@@ -66,42 +64,40 @@ void *get_mm_start(void)
     return buf;
 }
 
-void *app_malloc(void *arg)
-{
-    tank_mm_register(&in_swap_mm, msgq_start_addr, MSGQ_ALL_SIZE, "app_malloc");
-    my_sem_t *sem_malloc = (my_sem_t *)(start_addr + SEM_ADDR);
-    my_sem_creat(sem_malloc, 1);
-    sock_get_info_t *sock_get_info = (sock_get_info_t *)(start_addr + MALLOC_ADDR);
-    sock_send_info_t *sock_send_info = (sock_send_info_t *)(start_addr + MALLOC_ADDR);
-    int sem_val = 0;
-    while(1){
-        do{
-            my_sem_get_val(sem_malloc, &sem_val);
-            printf("[app]wait for malloc sem\n");
-            sleep(2);
-        }while(sem_val == 1);
-        printf("[app]exit, start malloc\n");
-        void *addr = tank_mm_alloc(&in_swap_mm, sock_get_info->len * TANK_MSGQ_BUFFER_SIZE + msgq_size);
-        strncpy(addr, "a message from backstage!", 100);
-        uint32_t shift = (uint32_t)addr - start_addr;
+// void *app_malloc(void *arg)
+// {
+//     tank_mm_register(&in_swap_mm, msgq_start_addr, MSGQ_ALL_SIZE, "app_malloc");
+//     my_sem_t *sem_malloc = (my_sem_t *)(start_addr + SEM_ADDR);
+//     my_sem_creat(sem_malloc, 1);
+//     sock_get_info_t *sock_get_info = (sock_get_info_t *)(start_addr + MALLOC_ADDR);
+//     sock_send_info_t *sock_send_info = (sock_send_info_t *)(start_addr + MALLOC_ADDR);
+//     int sem_val = 0;
+//     while(1){
+//         do{
+//             my_sem_get_val(sem_malloc, &sem_val);
+//             printf("[app]wait for malloc sem\n");
+//             sleep(2);
+//         }while(sem_val == 1);
+//         printf("[app]exit, start malloc\n");
+//         void *addr = tank_mm_alloc(&in_swap_mm, sock_get_info->len * TANK_MSGQ_BUFFER_SIZE + msgq_size);
+//         uint32_t shift = (uint32_t)addr - start_addr;
 
-        printf("[app]name:%s, len:%d\n", sock_get_info->name, sock_get_info->len);
-        msgq_map[msgq_id_seq].id = msgq_id_seq;
-        msgq_map[msgq_id_seq].shift = shift;
-        strncpy(msgq_map[msgq_id_seq].name, sock_get_info->name, 8);
+//         msgq_map[msgq_id_seq].id = msgq_id_seq;
+//         msgq_map[msgq_id_seq].shift = shift;
+//         strncpy(msgq_map[msgq_id_seq].name, sock_get_info->name, 8);
 
-        memset(sock_get_info, 0, sizeof(sock_get_info_t));
-        sock_send_info->shift = shift;
-        sock_send_info->id = msgq_id_seq;
+//         memset(sock_get_info, 0, sizeof(sock_get_info_t));
+//         sock_send_info->shift = shift;
+//         sock_send_info->id = msgq_id_seq;
 
-        msgq_id_seq += 1;
-        printf("[app]exit, malloc OK\n");
-        my_sem_get_val(sem_malloc, &sem_val);
-        my_sem_post(sem_malloc);
-        my_sem_get_val(sem_malloc, &sem_val);
-    }
-    return NULL;
-}
+//         msgq_id_seq += 1;
+//         printf("[app]exit, malloc OK\n");
+//         my_sem_get_val(sem_malloc, &sem_val);
+//         my_sem_post(sem_malloc);
+//         break;
+//     }
+//     return NULL;
+// }
 
 void *app_socket_test(void *arg)
 {
@@ -122,12 +118,18 @@ void *app_socket_test(void *arg)
     printf("[socket]wait for backstage allocate finished\n");
 
     my_sem_get_val(sem_malloc, &sem_val);
-    my_sem_wait(sem_malloc);
+    while(my_sem_trywait(sem_malloc) != SEM_SUCCESS){
+        sleep(1);
+        my_sem_get_val(sem_malloc, &sem_val);
+    }
+
 
     printf("[socket]backstage allocate OK\n");
     printf("[socket]get allocate info\n");
     sock_send_info_t *sock_send_info = (sock_send_info_t *)(start_addr + MALLOC_ADDR);
     printf("[socket]id:%d, addr_base:%p, shift:%d\n", sock_send_info->id, (void*)start_addr, sock_send_info->shift);
+    printf("%s\n", (char *)(start_addr + sock_send_info->shift));
+
     my_sem_get_val(sem_malloc, &sem_val);
     my_sem_post(sem_malloc);
     return NULL;
@@ -165,23 +167,16 @@ int main(int argc, char *argv[])
 {
     pthread_t p_pid;
     start_addr = (uint32_t)get_mm_start();
-    strncpy((char *)start_addr, "OK", 4);
+    printf("str:%s\n", (char *)start_addr);
     printf("start addr:%x\n", start_addr);
     msgq_start_addr = start_addr + TANK_MSGQ_BASE;
     print_all_info();
-    // printf("process pid is %d\n",getpid());
-    // my_sem_creat(&sem1, 1);
-    // uint8_t val;
-    // my_sem_get_val(&sem1, &val);
-    // printf("current: num:%d\n", val);
-    // my_sem_wait(&sem1);
-    // my_sem_get_val(&sem1, &val);
-    // printf("current: num:%d\n", val);
-    pthread_create(&p_pid,NULL,&app_malloc,NULL);
-    // pthread_create(&p_pid,NULL,&app_socket_test,NULL);
+    pthread_create(&p_pid,NULL,&app_socket_test,NULL);
     // pthread_create(&p_pid,NULL,&print2,NULL);
 
     pthread_join(p_pid,NULL);
+    // my_sem_destroy(&sem1);
+
     printf("addr:%x\n", start_addr);
     return 0;
 }
