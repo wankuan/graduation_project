@@ -11,7 +11,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fdata-sections -ffunction-sections -g
 
 
 SET(SRCS
-    ./in_swap.c
+    ./inner_swap.c
     ./../app_service/my_osal/my_sem.c
     ./../app_service/tank_msgq/tank_msgq.c
     ./../app_service/tank_memory/heap_4.c

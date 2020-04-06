@@ -5,8 +5,8 @@
 
 typedef uint16_t port_t;
 typedef uint32_t addr_t;
-typedef uint32_t ts_id_t;
-typedef uint32_t ts_msg_len_t;
+typedef uint16_t ts_id_t;
+typedef uint16_t ts_msg_len_t;
 
 
 typedef struct{
@@ -37,7 +37,44 @@ typedef enum{
     TS_ACCEPT_NOWAIT
 }ts_accept_type_t;
 
-ts_id_t         ts_socket(ts_protocol_t protocol, ts_type_t type);
+
+typedef struct{
+    ts_msg_len_t len;
+    uint8_t *buf;
+}ts_msg_t;
+
+typedef struct ts_msg_node{
+    ts_msg_len_t len;
+    void *buf;
+    struct ts_msg_node *next;
+}ts_msg_node_t;
+
+typedef struct{
+    ts_id_t id;
+    ts_addr_t addr;
+    ts_protocol_t protocol;
+    ts_type_t type;
+    char name[8];
+    ts_msg_node_t msg_list;
+}ts_info_t;
+
+
+typedef struct{
+    ts_id_t fd;
+    union{
+        ts_addr_t dst_addr;
+        ts_addr_t src_addr;
+    };
+    ts_msg_node_t *send;
+    ts_msg_node_t *recv;
+}
+
+
+
+
+
+
+ts_id_t         ts_socket_creat(ts_protocol_t protocol, ts_type_t type);
 tank_status_t     ts_connect(ts_id_t id, ts_addr_t addr);
 tank_status_t     ts_bind(ts_id_t id, ts_addr_t addr);
 tank_status_t     ts_listen(ts_id_t id, uint16_t max_len);

@@ -17,14 +17,14 @@ typedef struct A_BLOCK_LINK
 typedef struct{
     BlockLink_t xStart;
     BlockLink_t *pxEnd;
-    uint32_t xFreeBytesRemaining;
-    uint32_t xMinimumEverFreeBytesRemaining;
-    uint32_t addr;
-    uint32_t total_size;
+    uint32_t    xFreeBytesRemaining;
+    uint32_t    xMinimumEverFreeBytesRemaining;
+    uint32_t    addr;
+    uint32_t    total_size;
 }heap_info_t;
 
-void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize);
-void vPortFree(heap_info_t *heap, void *pv);
+void     *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize);
+void     vPortFree(heap_info_t *heap, void *pv);
 uint32_t xPortGetFreeHeapSize(heap_info_t *heap);
 uint32_t xPortGetMinimumEverFreeHeapSize( heap_info_t *heap );
 

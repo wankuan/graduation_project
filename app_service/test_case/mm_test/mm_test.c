@@ -35,19 +35,6 @@ int main(int argc, char *argv[])
     tank_mm_register(&my_mm, (uint32_t)buf, map_size, "huang");
 
     void * p = tank_mm_alloc(&my_mm, 256);
-    // printf("addr:%p, end:%p,total_size:%d\n", my_mm.heap.addr, my_mm.heap.pxEnd, my_mm.heap.total_size);
-    // printf("xFreeBytesRemaining:%d, xMinimumEverFreeBytesRemaining:%d,start:%p, size:%d\n", my_mm.heap.xFreeBytesRemaining,
-    //  my_mm.heap.xMinimumEverFreeBytesRemaining, my_mm.heap.xStart.pxNextFreeBlock, my_mm.heap.xStart.xBlockSize);
-    // printf("addr:%p\n", &my_mm);
-
-    // BlockLink_t *a;
-    // a = (BlockLink_t *)(p - 8);
-    // printf("%p,%x,size:%x,%p\n", a, a->pxNextFreeBlock, a->xBlockSize, &a->xBlockSize);
-    // for(int i=0;i<8;i++)
-    // {
-    //     printf("%x ",*(uint8_t*)((void*)(a)+i));
-    // }
-    // printf("\nsize:%x\n", *(uint32_t*)((void*)a+4));
     if(p == NULL){
         printf("allocate error\n");
     }
