@@ -2,12 +2,31 @@
 #define __TANK_SOCKET_PUB_H__
 
 #include "tank_pub.h"
+#include "tank_msgq.h"
+#include "tank_mm.h"
+
 
 typedef uint16_t port_t;
 typedef uint32_t addr_t;
 typedef uint16_t ts_id_t;
 typedef uint16_t ts_msg_len_t;
 
+#define TS_HOST_MAX 10
+#define TS_NAME_SIZE_MAX 8
+
+typedef enum {
+    CLOSED      = 0,
+    LISTEN      = 1,
+    SYN_SENT    = 2,
+    SYN_RCVD    = 3,
+    ESTABLISHED = 4,
+    FIN_WAIT_1  = 5,
+    FIN_WAIT_2  = 6,
+    CLOSE_WAIT  = 7,
+    CLOSING     = 8,
+    LAST_ACK    = 9,
+    TIME_WAIT   = 10
+}tcp_state_t;
 
 typedef struct{
     addr_t addr;
@@ -27,10 +46,6 @@ typedef enum{
     TS_PROTO_LEN
 }ts_protocol_t;
 
-typedef enum{
-    TS_SUCCESS = 0,
-    TS_FAIL = 1
-}tank_status_t;
 
 typedef enum{
     TS_ACCEPT_WAIT = 0,
@@ -39,39 +54,34 @@ typedef enum{
 
 
 typedef struct{
-    ts_msg_len_t len;
-    uint8_t *buf;
-}ts_msg_t;
-
-typedef struct ts_msg_node{
-    ts_msg_len_t len;
-    void *buf;
-    struct ts_msg_node *next;
-}ts_msg_node_t;
-
-typedef struct{
-    ts_id_t id;
-    ts_addr_t addr;
-    ts_protocol_t protocol;
-    ts_type_t type;
-    char name[8];
-    ts_msg_node_t msg_list;
-}ts_info_t;
-
-
-typedef struct{
-    ts_id_t fd;
     union{
-        ts_addr_t dst_addr;
-        ts_addr_t src_addr;
+        tcp_state_t state;
     };
-    ts_msg_node_t *send;
-    ts_msg_node_t *recv;
-}
+}ts_connect_status_t;
 
+// typedef struct{
+//     ts_msg_len_t len;
+//     uint8_t *buf;
+// }ts_msg_t;
 
+// typedef struct ts_msg_node{
+//     ts_msg_len_t len;
+//     void *buf;
+//     struct ts_msg_node *next;
+// }ts_msg_node_t;
 
-
+typedef struct{
+    ts_id_t             id;
+    ts_addr_t           addr;
+    ts_protocol_t       protocol;
+    ts_type_t           type;
+    char                name[TS_NAME_SIZE_MAX];
+    ts_connect_status_t connect_status[TS_HOST_MAX];
+    tank_mm_t           mm_handler;
+    tank_msgq_t         *sender;
+    tank_msgq_t         *receiver;
+    tank_msgq_t         *packet;
+}ts_info_t;
 
 
 ts_id_t         ts_socket_creat(ts_protocol_t protocol, ts_type_t type);

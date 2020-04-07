@@ -6,46 +6,9 @@
 #include <pthread.h>
 #include "tank_request.h"
 
-app_allocate_info_t msgq_map[256];
-
-uint16_t msgq_id_seq = 0;
-uint32_t shm_base_s = 0;
-
+app_allocate_info_t msgq_map_s[256];
+uint16_t app_id_seq_s = 0;
 tank_mm_t in_swap_mm_s;
-
-uint16_t sem_size = sizeof(my_sem_t);
-uint16_t msgq_size = sizeof(tank_msgq_t);
-
-
-void get_socket_info(void);
-
-void print_all_info(void)
-{
-    printf("sem:%d, msgq:%d \n", sem_size, msgq_size);
-}
-
-void *get_mm_start(void)
-{
-    const char *name = TANK_PUB_NAME;
-    int fd = shm_open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
-    if(fd < 0){
-        perror("creat ERROR");
-        exit(1);
-    }
-    printf("fd:%d\n", fd);
-    printf("map_size:%d\n", SHM_SIZE);
-    ftruncate(fd, SHM_SIZE);
-    void *buf = mmap(NULL, SHM_SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
-    if (!buf) {
-        printf("mmap failed\n");
-        close(fd);
-        exit(1);
-    }
-    memset(buf, 0, SHM_SIZE);
-    // munmap(buf, SHM_SIZE);
-    close(fd);
-    return buf;
-}
 
 void *app_malloc(void *arg)
 {
@@ -108,6 +71,8 @@ void get_socket_info(void)
     }
 }
 
+
+
 int main(int argc, char *argv[])
 {
     pthread_t p_pid;
@@ -115,7 +80,6 @@ int main(int argc, char *argv[])
     printf("start addr:%x\n", shm_base_s);
     printf("inner swap addr:%x\n", INNER_SWAP_ADDR);
     tank_mm_register(&in_swap_mm_s, INNER_SWAP_ADDR, INNER_SWAP_SIZE, "inner_swap_malloc");
-
 
     strncpy((char *)shm_base_s, "OK", 4);
 

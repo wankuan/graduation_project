@@ -9,7 +9,7 @@
 msgq_allocate_info_t msgq_map[256];
 
 uint16_t msgq_id_seq = 0;
-uint32_t shm_base = 0;
+uint32_t shm_base_s = 0;
 
 tank_mm_t in_swap_mm_s;
 
@@ -50,7 +50,7 @@ tank_status_t ts_malloc_heap(socket_heap_request_t *request, socket_heap_get_t *
         printf("[app]start malloc\n");
         void *addr = tank_mm_alloc(&in_swap_mm_s, sock_get_info->msgq_len * TANK_MSGQ_BUFFER_SIZE + msgq_size);
         strncpy(addr, "a message from backstage!", 100);
-        uint32_t shift = (uint32_t)addr - shm_base;
+        uint32_t shift = (uint32_t)addr - shm_base_s;
 
         printf("[app]name:%s, len:%d\n", sock_get_info->name, sock_get_info->msgq_len);
         msgq_map[msgq_id_seq].id = msgq_id_seq;
@@ -113,7 +113,7 @@ void *app_malloc(void *arg)
         printf("[app]start malloc\n");
         void *addr = tank_mm_alloc(&in_swap_mm_s, sock_get_info->msgq_len * TANK_MSGQ_BUFFER_SIZE + msgq_size);
         strncpy(addr, "a message from backstage!", 100);
-        uint32_t shift = (uint32_t)addr - shm_base;
+        uint32_t shift = (uint32_t)addr - shm_base_s;
 
         printf("[app]name:%s, len:%d\n", sock_get_info->name, sock_get_info->msgq_len);
         msgq_map[msgq_id_seq].id = msgq_id_seq;
@@ -145,9 +145,9 @@ void get_socket_info(void)
 int main(int argc, char *argv[])
 {
     pthread_t p_pid;
-    shm_base = (uint32_t)get_mm_start();
-    strncpy((char *)shm_base, "OK", 4);
-    printf("start addr:%x\n", shm_base);
+    shm_base_s = (uint32_t)get_mm_start();
+    strncpy((char *)shm_base_s, "OK", 4);
+    printf("start addr:%x\n", shm_base_s);
     print_all_info();
     // printf("process pid is %d\n",getpid());
     // my_sem_creat(&sem1, 1);
@@ -164,6 +164,6 @@ int main(int argc, char *argv[])
     // pthread_create(&p_pid,NULL,&print2,NULL);
 
     pthread_join(p_pid,NULL);
-    printf("addr:%x\n", shm_base);
+    printf("addr:%x\n", shm_base_s);
     return 0;
 }

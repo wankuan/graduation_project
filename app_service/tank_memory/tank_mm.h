@@ -16,7 +16,7 @@ typedef struct{
 // tank_mm_t 一定要创建全局变量
 tank_status_t tank_mm_register(tank_mm_t *handler, uint32_t addr, uint32_t size, const char *name);
 
-void *tank_mm_malloc(tank_mm_t *handler, uint32_t size);void *tank_mm_malloc(tank_mm_t *handler, uint32_t size);
+void *tank_mm_malloc(tank_mm_t *handler, uint32_t size);
 
 void tank_mm_free(tank_mm_t *handler, void *addr);
 

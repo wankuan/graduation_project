@@ -2,30 +2,47 @@
 #include "tank_socket_pub.h"
 #include "tank_msgq.h"
 #include "tank_map.h"
+#include "tank_request.h"
 
-tank_status_t socket_msgq_creat(const char *name, uint16_t len)
+static tank_status_t sock_allocate_heap(ts_info_t *ts);
+
+uint8_t shm_base_set_flag_s = 0;
+
+tank_status_t tank_socket_creat(ts_info_t *ts, const char * name, ts_protocol_t protocol, ts_type_t type)
 {
-    my_sem_t *sem_malloc = (my_sem_t *)(shm_start_addr + SEM_ADDR);
-    printf("[socket]start send malloc request\n");
+    ts->mm_handler.heap.total_size = 512;
+    strncpy(ts->name, name, 16);
+    sock_allocate_heap(ts);
+    return TANK_SUCCESS;
+}
 
-    my_sem_wait(sem_malloc);
-    printf("[socket]wait for backstage allocate finished\n");
 
-    sock_msgq_request_info_t *sock_get_info = (sock_msgq_request_info_t *)(start_addr + MALLOC_ADDR);
-    memset(sock_get_info, 0, sizeof(sock_msgq_request_info_t));
-    strncpy(sock_get_info->name, "sock_1", 8);
-    sock_get_info->len = 10;
-    printf("[socket]name:%s, len:%d\n", sock_get_info->name, sock_get_info->len);
+static tank_status_t sock_allocate_heap(ts_info_t *ts)
+{
+    app_info_t app_info;
+    tank_msgq_t *service_msgq = NULL;
 
-    my_sem_wait(sem_malloc);
+    if(shm_base_set_flag_s == 0){
+        get_service_base_addr();
+        shm_base_set_flag_s = 1;
+    }
+    get_service_msgq_addr(&service_msgq);
 
-    printf("[socket]backstage allocate OK\n");
-    printf("[socket]get allocate info\n");
-    sock_msgq_get_info_t *sock_send_info = (sock_msgq_get_info_t *)(start_addr + MALLOC_ADDR);
-    printf("[socket]id:%d, addr_base:%p, shift:%d\n", sock_send_info->id, (void*)start_addr, sock_send_info->shift);
-    printf("%s\n", (char *)(start_addr + sock_send_info->shift));
+    app_info.type = MM_ALLOCATE;
+    memset(&app_info.request, 0, sizeof(app_info.request));
+    strncpy(app_info.request.name, ts->name, TS_NAME_SIZE_MAX);
+    app_info.request.size = ts->mm_handler.heap.total_size;
+    printf("[APP]name:%s, len:%d\n", app_info.request.name, app_info.request.size);
 
-    my_sem_get_val(sem_malloc, &sem_val);
-    my_sem_post(sem_malloc);
+    tank_msgq_send(service_msgq, &app_info, sizeof(app_info_t));
 
+    printf("[APP]start send malloc request\n");
+    printf("[APP]wait for backstage allocate finished\n");
+    app_heap_get_t *app_get = (app_heap_get_t *)(SEM_ADDR);
+    my_sem_wait(&app_get->sem);
+
+    printf("[APP]backstage allocate OK\n");
+    printf("[APP]get allocate info\n");
+    printf("[APP]id:%d, addr_base:%p, shift:%d\n", app_get->id, (void*)shm_base_s, app_get->shift);
+    return TANK_SUCCESS;
 }
