@@ -26,10 +26,10 @@ typedef struct msgq_data_{
 typedef uint16_t msgq_len_t;
 typedef uint16_t msgq_size_t;
 typedef struct{
-    my_sem_t sem;
+    my_sem_t sem_rw;
+    my_sem_t sem_cur_len;
     msgq_len_t len;
     msgq_size_t size;
-    msgq_len_t cur_len;
     msgq_len_t head;
     msgq_len_t tail;
     void  *buf;
@@ -56,7 +56,8 @@ tank_status_t tank_msgq_delete(tank_msgq_t *handler);
 
 
 tank_status_t tank_msgq_recv(tank_msgq_t *handler, void *msg, msgq_len_t len);
-tank_status_t tank_msgq_recv_wait(tank_msgq_t *handler, void *msg, msgq_len_t len,uint16_t timeout);
+tank_status_t tank_msgq_recv_wait(tank_msgq_t* handler, void *msg, msgq_len_t len);
+tank_status_t tank_msgq_recv_timeout(tank_msgq_t* handler, void *msg, msgq_len_t len,uint16_t timeout);
 tank_status_t tank_msgq_send(tank_msgq_t *handler, void *msg, msgq_len_t len);
 
 uint8_t tank_msgq_is_full(tank_msgq_t *handler);
