@@ -54,11 +54,10 @@ void *app_malloc(void *arg)
 
     app_heap_get_t *app_get = (app_heap_get_t *)SEM_ADDR;
 
-    my_sem_t *sem_alloc = (my_sem_t *)TEMP_ADDR;
-    printf("sem addr:%p  size:%d\n", sem_alloc, sizeof(my_sem_t));
+    printf("sem addr:%p  size:%d\n", &app_get->sem, sizeof(my_sem_t));
 
-    sem_destroy(sem_alloc);
-    my_sem_creat(sem_alloc, 0);
+    sem_destroy(&app_get->sem);
+    my_sem_creat(&app_get->sem, 0);
 
     request_msgq = (tank_msgq_t*)tank_mm_malloc(&in_swap_mm_s, sizeof(tank_msgq_t)+20*20);
     printf("msgq addr:%p\n", request_msgq);
@@ -85,54 +84,19 @@ void *app_malloc(void *arg)
             msgq_map[msgq_id_seq].shift = shift;
             strncpy(msgq_map[msgq_id_seq].name, request.request.name, 8);
 
-            memset(app_get, 0, sizeof(app_heap_get_t));
+            // memset(app_get, 0, sizeof(app_heap_get_t));
             app_get->shift = shift;
             app_get->id = msgq_id_seq;
             msgq_id_seq += 1;
             get_socket_info();
             printf("[app]exit, malloc OK\n");
             int sem_val;
-            my_sem_get_val(sem_alloc, &sem_val);
-            my_sem_post(sem_alloc);
-            my_sem_get_val(sem_alloc, &sem_val);
+            my_sem_get_val(&app_get->sem, &sem_val);
+            my_sem_post(&app_get->sem);
+            my_sem_get_val(&app_get->sem, &sem_val);
         }
     }
     return NULL;
-    // my_sem_t *sem_malloc = (my_sem_t *)(SEM_ADDR);
-    // my_sem_creat(sem_malloc, 1);
-    // // sock_msgq_request_info_t *sock_get_info = (sock_msgq_request_info_t *)(MSGQ_REQUEST_ADDR);
-    // // sock_msgq_get_info_t *sock_send_info = (sock_msgq_get_info_t *)(MSGQ_REQUEST_ADDR);
-    // // int sem_val = 0;
-    // // printf("[app]wait for malloc sem\n");
-    // while(1){
-    //     tank_msgq_recv()
-    //     do{
-    //         my_sem_get_val(sem_malloc, &sem_val);
-    //         // printf("[app]wait for malloc sem\n");
-    //         // sleep(2);
-    //     }while(sem_val == 1);
-    //     printf("[app]start malloc\n");
-    //     void *addr = tank_mm_alloc(&in_swap_mm_s, sock_get_info->msgq_len * TANK_MSGQ_BUFFER_SIZE + msgq_size);
-    //     strncpy(addr, "a message from backstage!", 100);
-    //     uint32_t shift = (uint32_t)addr - shm_base;
-
-    //     printf("[app]name:%s, len:%d\n", sock_get_info->name, sock_get_info->msgq_len);
-    //     msgq_map[msgq_id_seq].id = msgq_id_seq;
-    //     msgq_map[msgq_id_seq].shift = shift;
-    //     strncpy(msgq_map[msgq_id_seq].name, sock_get_info->name, 8);
-
-    //     memset(sock_get_info, 0, sizeof(sock_msgq_request_info_t));
-    //     sock_send_info->shift = shift;
-    //     sock_send_info->id = msgq_id_seq;
-
-    //     msgq_id_seq += 1;
-    //     get_socket_info();
-    //     printf("[app]exit, malloc OK\n");
-    //     my_sem_get_val(sem_malloc, &sem_val);
-    //     my_sem_post(sem_malloc);
-    //     my_sem_get_val(sem_malloc, &sem_val);
-    // }
-
 }
 
 void get_socket_info(void)

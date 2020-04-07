@@ -38,17 +38,15 @@ void *get_mm_start(void)
     close(fd);
     return buf;
 }
-my_sem_t *sem_alloc;
+
 void *app_socket_test(void *arg)
 {
     int sem_val = 0;
     app_heap_get_t *app_get = (app_heap_get_t *)(SEM_ADDR);
 
-    sem_alloc = (my_sem_t *)TEMP_ADDR;
-
     printf("[socket]start send malloc request\n");
 
-    my_sem_get_val(sem_alloc, &sem_val);
+    my_sem_get_val(&app_get->sem, &sem_val);
     printf("[socket]wait for backstage allocate finished\n");
     app_info_t app_info;
     app_info.type = MM_ALLOCATE;
@@ -59,18 +57,18 @@ void *app_socket_test(void *arg)
     tank_msgq_send(backstage_msgq, &app_info, sizeof(app_info_t));
 
     // while(1){
-    //     my_sem_get_val(sem_alloc, &sem_val);
+    //     my_sem_get_val(&app_get->sem, &sem_val);
     //     sleep(1);
     // }
 
-    my_sem_wait(&(app_get->sem));
+    my_sem_wait(&app_get->sem);
     printf("[socket]backstage allocate OK\n");
     printf("[socket]get allocate info\n");
 
     printf("[socket]id:%d, addr_base:%p, shift:%d\n", app_get->id, (void*)shm_base, app_get->shift);
 
-    my_sem_get_val(sem_alloc, &sem_val);
-    my_sem_post(sem_alloc);
+    my_sem_get_val(&app_get->sem, &sem_val);
+    // my_sem_post(&app_get->sem);
     return NULL;
 }
 
