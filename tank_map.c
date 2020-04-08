@@ -1,6 +1,6 @@
 #include "tank_map.h"
 
-volatile uint32_t shm_base_s = 0u;
+volatile uint32_t g_shm_base = 0u;
 
 tank_status_t get_service_base_addr(void)
 {
@@ -16,15 +16,15 @@ tank_status_t get_service_base_addr(void)
         close(fd);
         exit(1);
     }
-    shm_base_s = (uint32_t)buf;
-    printf("[MAP]shm_base:0x%x  addr:%p\n", shm_base_s, &shm_base_s);
+    g_shm_base = (uint32_t)buf;
+    printf("[MAP]shm_base:0x%x  addr:%p\n", g_shm_base, &g_shm_base);
     close(fd);
     return TANK_SUCCESS;
 }
 
 tank_status_t get_service_msgq_addr(tank_msgq_t **addr)
 {
-    *addr = (tank_msgq_t *)(*(uint32_t *)MSGQ_MAP_ADDR + shm_base_s);
+    *addr = (tank_msgq_t *)(*(uint32_t *)MSGQ_MAP_ADDR + g_shm_base);
     printf("[MAP]service msgq addr:%p\n", *addr);
     return TANK_SUCCESS;
 }

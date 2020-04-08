@@ -16,7 +16,7 @@ SET(SRCS
     ./../../tank_msgq/tank_msgq.c
     ./../../tank_memory/heap_4.c
     ./../../tank_memory/tank_mm.c
-    ./../../tank_socket/tank_socket.c
+    ./../../tank_app/tank_app.c
     ./../../../tank_map.c
 )
 
@@ -25,7 +25,7 @@ include_directories(
     ./../../my_osal
     ./../../tank_msgq
     ./../../tank_memory
-    ./../../tank_socket
+    ./../../tank_app
     ./../../../
     ./../../
 )

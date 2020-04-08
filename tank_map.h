@@ -19,16 +19,16 @@
 
 #define APP_PREFIX       (uint32_t)(MSGQ_SIZE)
 
-#define MSGQ_MAP_ADDR            (uint32_t)(shm_base_s + ADDR_MAP_PREFIX)
+#define MSGQ_MAP_ADDR            (uint32_t)(g_shm_base + ADDR_MAP_PREFIX)
 
-#define SEM_ADDR                 (uint32_t)(shm_base_s + SEM_PREFIX)
+#define SEM_ADDR                 (uint32_t)(g_shm_base + SEM_PREFIX)
 
-#define INNER_SWAP_ADDR            (uint32_t)(shm_base_s + SHM_PREFIX)
-#define APP_REQUEST_ADDR   (uint32_t)(shm_base_s + APP_REQUEST_PREFIX)
+#define INNER_SWAP_ADDR            (uint32_t)(g_shm_base + SHM_PREFIX)
+#define APP_REQUEST_ADDR   (uint32_t)(g_shm_base + APP_REQUEST_PREFIX)
 
-#define APP_ADDR         (uint32_t)(shm_base_s + APP_PREFIX)
+#define APP_ADDR         (uint32_t)(g_shm_base + APP_PREFIX)
 
-extern volatile uint32_t shm_base_s;
+extern volatile uint32_t g_shm_base;
 
 
 tank_status_t get_service_base_addr(void);

@@ -11,7 +11,7 @@ msgq_allocate_info_t msgq_map[256];
 
 uint16_t msgq_id_seq = 0;
 
-uint32_t shm_base_s = 0;
+uint32_t g_shm_base = 0;
 tank_mm_t g_in_swap_mm;
 
 uint16_t sem_size = sizeof(my_sem_t);
@@ -67,8 +67,8 @@ void *app_socket_test(void *arg)
     printf("[socket]backstage allocate OK\n");
     printf("[socket]get allocate info\n");
     sock_msgq_get_info_t *sock_send_info = (sock_msgq_get_info_t *)(MSGQ_REQUEST_ADDR);
-    printf("[socket]id:%d, addr_base:%p, shift:%d\n", sock_send_info->id, (void*)shm_base_s, sock_send_info->shift);
-    printf("%s\n", (char *)(shm_base_s + sock_send_info->shift));
+    printf("[socket]id:%d, addr_base:%p, shift:%d\n", sock_send_info->id, (void*)g_shm_base, sock_send_info->shift);
+    printf("%s\n", (char *)(g_shm_base + sock_send_info->shift));
 
     my_sem_get_val(sem_malloc, &sem_val);
     my_sem_post(sem_malloc);
@@ -78,9 +78,9 @@ void *app_socket_test(void *arg)
 int main(int argc, char *argv[])
 {
     pthread_t p_pid;
-    shm_base_s = (uint32_t)get_mm_start();
-    printf("str:%s\n", (char *)shm_base_s);
-    printf("start addr:%x\n", shm_base_s);
+    g_shm_base = (uint32_t)get_mm_start();
+    printf("str:%s\n", (char *)g_shm_base);
+    printf("start addr:%x\n", g_shm_base);
     print_all_info();
     pthread_create(&p_pid,NULL,&app_socket_test,NULL);
     // pthread_create(&p_pid,NULL,&print2,NULL);
@@ -88,6 +88,6 @@ int main(int argc, char *argv[])
     pthread_join(p_pid,NULL);
     // my_sem_destroy(&sem1);
 
-    printf("addr:%x\n", shm_base_s);
+    printf("addr:%x\n", g_shm_base);
     return 0;
 }

@@ -1,7 +1,7 @@
-#include "tank_socket_pub.h"
-#include "tank_socket.h"
+#include "tank_app_pub.h"
+#include "tank_app.h"
 #include "pthread.h"
-ts_info_t app[10];
+ta_info_t app[10];
 
 
 char name_buf[10][8]={
@@ -23,7 +23,7 @@ void *test1(void *arg)
 {
     while(1){
         for(int i=0;i<len;++i){
-        tank_socket_creat(&app[i], name_buf[i], 0, 0);
+        tank_app_creat(&app[i], name_buf[i], 0, 0);
         printf("\n\n\n");
         }
         sleep(5);
@@ -33,7 +33,7 @@ void *test2(void *arg)
 {
     while(1){
         for(int i=0;i<len;++i){
-        tank_socket_creat(&app[i], name_buf[i], 0, 0);
+        tank_app_creat(&app[i], name_buf[i], 0, 0);
         }
         sleep(1);
     }
@@ -43,7 +43,7 @@ void *test3(void *arg)
 {
     while(1){
         for(int i=0;i<len;++i){
-        tank_socket_creat(&app[i], name_buf[i], 0, 0);
+        tank_app_creat(&app[i], name_buf[i], 0, 0);
         }
         sleep(1);
     }

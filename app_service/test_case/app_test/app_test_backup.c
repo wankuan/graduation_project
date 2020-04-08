@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include "tank_request.h"
 
-uint32_t shm_base_s = 0;
+uint32_t g_shm_base = 0;
 tank_msgq_t *backstage_msgq;
 uint16_t sem_size = sizeof(my_sem_t);
 uint16_t msgq_size = sizeof(tank_msgq_t);
@@ -48,19 +48,19 @@ void *app_socket_test(void *arg)
 
     my_sem_get_val(&app_get->sem, &sem_val);
     printf("[socket]wait for backstage allocate finished\n");
-    app_info_t app_info;
+    app_request_info_t app_info;
     app_info.type = MM_ALLOCATE;
-    memset(&app_info, 0, sizeof(app_info_t));
+    memset(&app_info, 0, sizeof(app_request_info_t));
     strncpy(app_info.request.name, "app_1", 8);
     app_info.request.size = 256;
     printf("[socket]name:%s, len:%d\n", app_info.request.name, app_info.request.size);
-    tank_msgq_send(backstage_msgq, &app_info, sizeof(app_info_t));
+    tank_msgq_send(backstage_msgq, &app_info, sizeof(app_request_info_t));
 
     my_sem_wait(&app_get->sem);
     printf("[socket]backstage allocate OK\n");
     printf("[socket]get allocate info\n");
 
-    printf("[socket]id:%d, addr_base:%p, shift:%d\n", app_get->id, (void*)shm_base_s, app_get->shift);
+    printf("[socket]id:%d, addr_base:%p, shift:%d\n", app_get->id, (void*)g_shm_base, app_get->shift);
 
     my_sem_get_val(&app_get->sem, &sem_val);
 
@@ -74,10 +74,10 @@ void *app_socket_test(void *arg)
 int main(int argc, char *argv[])
 {
     pthread_t p_pid;
-    shm_base_s = (uint32_t)get_mm_start();
-    printf("str:%s\n", (char *)shm_base_s);
-    printf("start addr:%x\n", shm_base_s);
-    uint32_t backstage_msgq_addr = *(uint32_t *)MSGQ_MAP_ADDR + shm_base_s;
+    g_shm_base = (uint32_t)get_mm_start();
+    printf("str:%s\n", (char *)g_shm_base);
+    printf("start addr:%x\n", g_shm_base);
+    uint32_t backstage_msgq_addr = *(uint32_t *)MSGQ_MAP_ADDR + g_shm_base;
     backstage_msgq = (tank_msgq_t *)backstage_msgq_addr;
     printf("backstage msgq addr:%p\n", backstage_msgq);
     print_all_info();
@@ -87,6 +87,6 @@ int main(int argc, char *argv[])
     pthread_join(p_pid,NULL);
     // my_sem_destroy(&sem1);
 
-    printf("addr:%x\n", shm_base_s);
+    printf("addr:%x\n", g_shm_base);
     return 0;
 }

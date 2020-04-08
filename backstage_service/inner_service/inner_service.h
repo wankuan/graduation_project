@@ -6,8 +6,14 @@
 #include "tank_map.h"
 
 
+typedef struct{
+    uint16_t id;
+    void *heap_addr;
+    void *msgq_recv_addr;
+    void *msgq_send_addr;
+    char name[16];
+}app_info_t;
 
-tank_status_t ts_malloc_heap(my_sem_t sem, socket_heap_request_t *request, socket_heap_get_t *get);
 
 
 #endif

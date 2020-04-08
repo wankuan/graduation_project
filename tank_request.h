@@ -3,6 +3,11 @@
 
 #include "tank_pub.h"
 
+typedef struct{
+    uint16_t id;
+    uint32_t recv_shift;
+    uint32_t send_shift;
+}app_msgq_info_t;
 
 typedef enum{
     MM_ALLOCATE = 0,
@@ -27,19 +32,21 @@ typedef struct{
 
 typedef struct{
     app_request_type_t type;
-    app_heap_request_t request;
-}app_info_t;
+    union{
+        app_heap_request_t request;
+        app_msgq_info_t msgq;
+    };
+}app_request_info_t;
 
-typedef struct{
-    uint16_t id;
-    uint32_t shift;
-}socket_heap_get_t;
 
 typedef struct{
     uint16_t id;
     uint32_t shift;
     char name[8];
 }app_allocate_info_t;
+
+
+
 
 
 

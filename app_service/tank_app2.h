@@ -1,5 +1,5 @@
-#ifndef __TANK_APP_H__
-#define __TANK_APP_H__
+#ifndef __TANK_APP2_H__
+#define __TANK_APP2_H__
 #include "lib_pub.h"
 #include "data_packet.h"
 #define INVALID_POINTER(pointer) (pointer==NULL)
