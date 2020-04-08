@@ -24,6 +24,7 @@ include_directories(
     ./../../app_service/my_osal
     ./../../app_service/tank_msgq
     ./../../app_service/tank_memory
+    ./../../app_service/tank_app
     ./../../app_service
     ./../../
     ./../

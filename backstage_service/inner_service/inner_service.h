@@ -7,11 +7,10 @@
 
 
 typedef struct{
-    uint16_t id;
+    tank_id_t id;
     void *heap_addr;
     void *msgq_recv_addr;
     void *msgq_send_addr;
-    char name[16];
 }app_info_t;
 
 

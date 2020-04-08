@@ -21,34 +21,24 @@ int len = sizeof(name_buf)/sizeof(name_buf[0]);
 
 void *test1(void *arg)
 {
-    while(1){
-        for(int i=0;i<len;++i){
-        tank_app_creat(&app[i], name_buf[i], 0, 0);
-        printf("\n\n\n");
-        }
-        sleep(5);
+    for(int i=0;i<2;++i){
+    tank_app_creat(&app[i], i, 0, 0);
+    printf("\n\n\n");
     }
+    return NULL;
 }
+
+
 void *test2(void *arg)
 {
+    sleep(3);
     while(1){
-        for(int i=0;i<len;++i){
-        tank_app_creat(&app[i], name_buf[i], 0, 0);
+        for(int i=0;i<25;i++){
+            tank_app_send(&app[0], 1, SYN_SENT);
         }
-        sleep(1);
+        sleep(10);
     }
 }
-
-void *test3(void *arg)
-{
-    while(1){
-        for(int i=0;i<len;++i){
-        tank_app_creat(&app[i], name_buf[i], 0, 0);
-        }
-        sleep(1);
-    }
-}
-
 
 int main(int argc, char *argv[])
 {
@@ -56,7 +46,7 @@ int main(int argc, char *argv[])
 
     pthread_t my_pid_t;
     pthread_create(&my_pid_t,NULL,&test1,NULL);
-    // pthread_create(&my_pid_t,NULL,&test2,NULL);
+    pthread_create(&my_pid_t,NULL,&test2,NULL);
     // pthread_create(&my_pid_t,NULL,&test3,NULL);
 
     pthread_join(my_pid_t,NULL);

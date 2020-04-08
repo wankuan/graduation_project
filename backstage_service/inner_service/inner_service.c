@@ -7,8 +7,9 @@
 #include "tank_request.h"
 #include "inner_service.h"
 
-app_allocate_info_t      g_msgq_map[256];
 app_info_t               app_info_table[256];
+tank_id_t                app_lut[256];
+
 uint16_t                 g_app_id_seq = 0;
 tank_mm_t                g_in_swap_mm;
 
@@ -25,8 +26,8 @@ tank_status_t app_malloc_init(void);
 void print_app_info_table(void)
 {
     for(int i=0;i<g_app_id_seq;++i){
-        printf("[service]id:%d, name:%s, mm:%p, msgq_r:%p, msgq_s:%p\n",
-        app_info_table[i].id, app_info_table[i].name, app_info_table[i].heap_addr,
+        printf("[service]id:%d, mm:%p, msgq_r:%p, msgq_s:%p\n",
+        app_info_table[i].id, app_info_table[i].heap_addr,
         app_info_table[i].msgq_recv_addr, app_info_table[i].msgq_send_addr
         );
     }
@@ -63,36 +64,37 @@ tank_status_t app_malloc_init(void)
 void *app_malloca_thread(void *arg)
 {
     while(1){
+        sleep(1);
         tank_msgq_recv_wait(g_service_request_msgq, &g_app_request, 20);
         if(g_app_request.type == MM_ALLOCATE){
             printf("\n[app]start malloc\n");
-            void *addr = tank_mm_alloc(&g_in_swap_mm, g_app_request.request.size);
+            printf("[app]id:%d, size:%d\n", g_app_request.heap.id, g_app_request.heap.size);
+            void *addr = tank_mm_alloc(&g_in_swap_mm, g_app_request.heap.size);
             printf("[%s]remain:%d\n", g_in_swap_mm.name, g_in_swap_mm.heap.xFreeBytesRemaining);
             uint32_t shift = (uint32_t)addr - g_shm_base;
-            printf("[app]name:%s, size:%d\n", g_app_request.request.name, g_app_request.request.size);
 
-            g_msgq_map[g_app_id_seq].id = g_app_id_seq;
-            g_msgq_map[g_app_id_seq].shift = shift;
-            strncpy(g_msgq_map[g_app_id_seq].name, g_app_request.request.name, 8);
-            printf("[app]id:%d, name:%s, shift:%d\n", g_msgq_map[g_app_id_seq].id, g_msgq_map[g_app_id_seq].name, g_msgq_map[g_app_id_seq].shift);
-
-            app_info_table[g_app_id_seq].id = g_app_id_seq;
+            app_info_table[g_app_id_seq].id = g_app_request.heap.id;
             app_info_table[g_app_id_seq].heap_addr = (void*)addr;
-            strncpy(app_info_table[g_app_id_seq].name, g_app_request.request.name, 16);
+
+            printf("[app]id:%d, shift:%d\n", g_app_request.heap.id, shift);
 
             // memset(g_app_get, 0, sizeof(app_heap_get_t));
             g_app_get->shift = shift;
-            g_app_get->id = g_app_id_seq;
-            g_app_id_seq += 1;
 
+            g_app_id_seq += 1;
             printf("[app]exit, malloc OK\n");
             my_sem_post(&g_app_get->sem);
-        }else if (g_app_request.type == PUSH_MSGQ_ADDR){
+        }else if(g_app_request.type == PUSH_MSGQ_ADDR){
             printf("[service]id:%d, type:%d, recv_shift:%d, send_shift:%d\n", g_app_request.msgq.id, g_app_request.type, g_app_request.msgq.recv_shift, g_app_request.msgq.send_shift);
             app_info_table[g_app_request.msgq.id].msgq_recv_addr = (void*)g_app_request.msgq.recv_shift + g_shm_base;
             app_info_table[g_app_request.msgq.id].msgq_send_addr = (void*)g_app_request.msgq.send_shift + g_shm_base;
             print_app_info_table();
+        }else if(g_app_request.type == SEND_MSG){
+            printf("[service]recv a msg, src_id:%d, dst_id:%d, state:%d\n",
+                    g_app_request.msg.src_id, g_app_request.msg.dst_id, g_app_request.msg.state
+                    );
         }
+
     }
     return NULL;
 }

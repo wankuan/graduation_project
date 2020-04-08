@@ -4,8 +4,8 @@
 #include "tank_app_pub.h"
 
 
-tank_status_t tank_app_creat(ta_info_t *ta, const char * name, ta_protocol_t protocol, ta_type_t type);
-
+tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type);
+tank_status_t tank_app_send(ta_info_t *ta, tank_id_t dst_id, tcp_state_t state);
 
 
 // ta_id_t         ta_socket_creat(ta_protocol_t protocol, ta_type_t type);

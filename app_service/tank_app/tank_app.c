@@ -11,13 +11,31 @@ static tank_status_t app_allocate_msgq(ta_info_t *ta);
 uint8_t g_shm_baseet_flag_s = 0;
 tank_msgq_t *g_service_msgq = NULL;
 
-tank_status_t tank_app_creat(ta_info_t *ta, const char * name, ta_protocol_t protocol, ta_type_t type)
+tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type)
 {
+    ta->id = id;
     ta->protocol = protocol;
     ta->type = type;
-    strncpy(ta->name, name, 32);
+    snprintf(ta->name, 8, "APP%d", ta->id);
     app_allocate_heap(ta);
     app_allocate_msgq(ta);
+    return TANK_SUCCESS;
+}
+tank_status_t tank_app_send(ta_info_t *ta, tank_id_t dst_id, tcp_state_t state)
+{
+    app_request_info_t info;
+    if(ta->id == dst_id){
+        return TANK_FAIL;
+    }
+    memset(&info, 0, sizeof(app_request_info_t));
+    info.type = SEND_MSG;
+    info.msg.src_id = ta->id;
+    info.msg.dst_id = dst_id;
+    info.msg.state = state;
+    tank_msgq_send(g_service_msgq, &info, sizeof(app_request_info_t));
+    printf("[%s]send a msg, src_id:%d, dst_id:%d, state:%d\n",
+            ta->name, ta->id, dst_id, state
+            );
     return TANK_SUCCESS;
 }
 static tank_status_t app_allocate_msgq(ta_info_t *ta)
@@ -56,10 +74,10 @@ static tank_status_t app_allocate_heap(ta_info_t *ta)
     get_service_msgq_addr(&g_service_msgq);
 
     app_info.type = MM_ALLOCATE;
-    memset(&app_info.request, 0, sizeof(app_info.request));
-    strncpy(app_info.request.name, ta->name, TA_NAME_SIZE_MAX);
-    app_info.request.size = APP_HEAP_SIZE;
-    printf("[APP]name:%s, len:%d\n", app_info.request.name, app_info.request.size);
+    memset(&app_info.heap, 0, sizeof(app_info.heap));
+    app_info.heap.id = ta->id;
+    app_info.heap.size = APP_HEAP_SIZE;
+    printf("[APP]id:%d, len:%d\n", app_info.heap.id, app_info.heap.size);
 
     tank_msgq_send(g_service_msgq, &app_info, sizeof(app_request_info_t));
 
@@ -71,10 +89,10 @@ static tank_status_t app_allocate_heap(ta_info_t *ta)
     char name[16] = {0};
     snprintf(name, 16, "%s_mm", ta->name);
     tank_mm_register(&ta->mm_handler, g_shm_base+app_get->shift , APP_HEAP_SIZE, name);
-    ta->id = app_get->id;
+
 
     printf("[APP]backstage allocate OK\n");
     printf("[APP]get allocate info\n");
-    printf("[APP]id:%d, addr_base:%p, shift:%d\n", app_get->id, (void*)g_shm_base, app_get->shift);
+    printf("[APP]addr_base:%p, shift:%d\n", (void*)g_shm_base, app_get->shift);
     return TANK_SUCCESS;
 }
