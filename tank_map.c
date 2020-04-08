@@ -1,6 +1,7 @@
 #include "tank_map.h"
 
-uint32_t shm_base_s;
+volatile uint32_t shm_base_s = 0u;
+
 tank_status_t get_service_base_addr(void)
 {
     const char *name = TANK_PUB_NAME;
@@ -16,7 +17,7 @@ tank_status_t get_service_base_addr(void)
         exit(1);
     }
     shm_base_s = (uint32_t)buf;
-    printf("[MAP]shm_base:0x%x\n", shm_base_s);
+    printf("[MAP]shm_base:0x%x  addr:%p\n", shm_base_s, &shm_base_s);
     close(fd);
     return TANK_SUCCESS;
 }

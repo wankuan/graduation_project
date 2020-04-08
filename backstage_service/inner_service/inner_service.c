@@ -6,99 +6,89 @@
 #include <pthread.h>
 #include "tank_request.h"
 
-app_allocate_info_t msgq_map_s[256];
-uint16_t app_id_seq_s = 0;
-tank_mm_t in_swap_mm_s;
+app_allocate_info_t      g_msgq_map[256];
+uint16_t                 g_app_id_seq = 0;
+tank_mm_t                g_in_swap_mm;
 
-void *app_malloc(void *arg)
+pthread_t                g_service_pid;
+tank_msgq_t             *g_service_request_msgq;
+app_heap_get_t          *g_app_get;
+app_info_t               g_app_request;
+
+
+tank_status_t app_malloc_init(void);
+
+void get_socket_info(void)
 {
-    app_info_t request;
-    tank_msgq_t *request_msgq;
+    for(int i=0;i<g_app_id_seq;i++)
+    {
+        printf("id:%d, name:%s, shift:%d\n", g_msgq_map[i].id, g_msgq_map[i].name, g_msgq_map[i].shift);
+    }
+}
 
-    app_heap_get_t *app_get = (app_heap_get_t *)SEM_ADDR;
+tank_status_t inner_service_init(void)
+{
+    get_service_base_addr();
+    printf("start addr:0x%x\n", shm_base_s);
+    printf("inner swap addr:0x%x\n", INNER_SWAP_ADDR);
+    tank_mm_register(&g_in_swap_mm, INNER_SWAP_ADDR, INNER_SWAP_SIZE, "inner_service_mm");
+    app_malloc_init();
+    return TANK_SUCCESS;
 
-    printf("sem addr:%p  size:%d\n", &app_get->sem, sizeof(my_sem_t));
+}
+tank_status_t app_malloc_init(void)
+{
+    g_app_get = (app_heap_get_t *)SEM_ADDR;
+    printf("sem addr:%p  size:%d\n", &g_app_get->sem, sizeof(my_sem_t));
 
-    sem_destroy(&app_get->sem);
-    my_sem_creat(&app_get->sem, 0);
+    sem_destroy(&g_app_get->sem);
+    my_sem_creat(&g_app_get->sem, 0);
 
-    request_msgq = (tank_msgq_t*)tank_mm_malloc(&in_swap_mm_s, sizeof(tank_msgq_t)+20*20);
-    printf("msgq addr:%p\n", request_msgq);
+    g_service_request_msgq = (tank_msgq_t*)tank_mm_malloc(&g_in_swap_mm, sizeof(tank_msgq_t)+20*20);
+    printf("msgq addr:%p\n", g_service_request_msgq);
 
-    *(uint32_t*)MSGQ_MAP_ADDR = (uint32_t)request_msgq - shm_base_s;
+    *(uint32_t*)MSGQ_MAP_ADDR = (uint32_t)g_service_request_msgq - shm_base_s;
+    tank_msgq_creat(g_service_request_msgq, 20, 20);
+    return TANK_SUCCESS;
+}
 
-    tank_msgq_creat(request_msgq, 20, 20);
 
-
+void *app_malloca_thread(void *arg)
+{
     while(1){
-        // while(tank_msgq_recv(request_msgq, &request, 20)==TANK_FAIL){
-        //     sleep(1);
-        //     printf("wait for meessage from app\n");
-        // }
-        tank_msgq_recv_wait(request_msgq, &request, 20);
-        if(request.type == MM_ALLOCATE){
-            printf("[app]start malloc\n");
-            void *addr = tank_mm_alloc(&in_swap_mm_s, request.request.size);
-
+        tank_msgq_recv_wait(g_service_request_msgq, &g_app_request, 20);
+        if(g_app_request.type == MM_ALLOCATE){
+            printf("\n[app]start malloc\n");
+            void *addr = tank_mm_alloc(&g_in_swap_mm, g_app_request.request.size);
+            printf("[%s]remain:%d\n", g_in_swap_mm.name, g_in_swap_mm.heap.xFreeBytesRemaining);
             uint32_t shift = (uint32_t)addr - shm_base_s;
+            printf("[app]name:%s, size:%d\n", g_app_request.request.name, g_app_request.request.size);
 
-            printf("[app]name:%s, size:%d\n", request.request.name, request.request.size);
+            g_msgq_map[g_app_id_seq].id = g_app_id_seq;
+            g_msgq_map[g_app_id_seq].shift = shift;
+            strncpy(g_msgq_map[g_app_id_seq].name, g_app_request.request.name, 8);
+            printf("[app]id:%d, name:%s, shift:%d\n", g_msgq_map[g_app_id_seq].id, g_msgq_map[g_app_id_seq].name, g_msgq_map[g_app_id_seq].shift);
+            // memset(g_app_get, 0, sizeof(app_heap_get_t));
+            g_app_get->shift = shift;
+            g_app_get->id = g_app_id_seq;
+            g_app_id_seq += 1;
 
-            msgq_map[msgq_id_seq].id = msgq_id_seq;
-            msgq_map[msgq_id_seq].shift = shift;
-            strncpy(msgq_map[msgq_id_seq].name, request.request.name, 8);
-
-            // memset(app_get, 0, sizeof(app_heap_get_t));
-            app_get->shift = shift;
-            app_get->id = msgq_id_seq;
-            msgq_id_seq += 1;
-            get_socket_info();
             printf("[app]exit, malloc OK\n");
-            int sem_val;
-            my_sem_get_val(&app_get->sem, &sem_val);
-            my_sem_post(&app_get->sem);
-            my_sem_get_val(&app_get->sem, &sem_val);
+            my_sem_post(&g_app_get->sem);
         }
     }
     return NULL;
 }
 
-void get_socket_info(void)
-{
-    for(int i=0;i<msgq_id_seq;i++)
-    {
-        printf("id:%d, name:%s, shift:%d\n", msgq_map[i].id, msgq_map[i].name, msgq_map[i].shift);
-    }
-}
+
 
 
 
 int main(int argc, char *argv[])
 {
-    pthread_t p_pid;
-    shm_base_s = (uint32_t)get_mm_start();
-    printf("start addr:%x\n", shm_base_s);
-    printf("inner swap addr:%x\n", INNER_SWAP_ADDR);
-    tank_mm_register(&in_swap_mm_s, INNER_SWAP_ADDR, INNER_SWAP_SIZE, "inner_swap_malloc");
-
-    strncpy((char *)shm_base_s, "OK", 4);
-
-    print_all_info();
-    // printf("process pid is %d\n",getpid());
-    // my_sem_creat(&sem1, 1);
-    // uint8_t val;
-    // my_sem_get_val(&sem1, &val);
-    // printf("current: num:%d\n", val);
-    // my_sem_wait(&sem1);
-    // my_sem_get_val(&sem1, &val);
-    // printf("current: num:%d\n", val);
-    pthread_create(&p_pid,NULL,&app_malloc,NULL);
-    // pthread_create(&p_pid,NULL,&get_socket_info,NULL);
-
-    // pthread_create(&p_pid,NULL,&app_socket_test,NULL);
-    // pthread_create(&p_pid,NULL,&print2,NULL);
-
-    pthread_join(p_pid,NULL);
-    printf("addr:%x\n", shm_base_s);
+    inner_service_init();
+    pthread_create(&g_service_pid,NULL,&app_malloca_thread,NULL);
+    pthread_join(g_service_pid,NULL);
+    printf("[inner_service]:ending!\n");
     return 0;
 }

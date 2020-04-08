@@ -28,7 +28,7 @@
 
 #define APP_ADDR         (uint32_t)(shm_base_s + APP_PREFIX)
 
-extern uint32_t shm_base_s;
+extern volatile uint32_t shm_base_s;
 
 
 tank_status_t get_service_base_addr(void);

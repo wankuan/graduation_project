@@ -40,9 +40,6 @@ typedef struct{
     tank_msgq_t *addr[0];
 }tank_msgq_map_t;
 
-extern tank_msgq_map_t *msgq_map_s;
-
-
 
 
 

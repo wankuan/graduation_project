@@ -12,7 +12,7 @@ msgq_allocate_info_t msgq_map[256];
 uint16_t msgq_id_seq = 0;
 
 uint32_t shm_base_s = 0;
-tank_mm_t in_swap_mm_s;
+tank_mm_t g_in_swap_mm;
 
 uint16_t sem_size = sizeof(my_sem_t);
 uint16_t msgq_size = sizeof(tank_msgq_t);

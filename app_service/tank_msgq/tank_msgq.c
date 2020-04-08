@@ -4,22 +4,6 @@
 #include <fcntl.h>           /* For O_* constants */
 
 
-tank_msgq_map_t *msgq_map_s;
-
-
-tank_status_t tank_msgq_constructor(void)
-{
-    msgq_map_s = (tank_msgq_map_t*)TANK_MSGQ_MAP_ADDR_START;
-    return TANK_SUCCESS;
-}
-tank_msgq_t *tank_get_msgq_addr(tank_queue_id_t id)
-{
-    if(id > TANK_MAX_SIZE){
-        return NULL;
-    }
-    return msgq_map_s->addr[id];
-}
-
 tank_status_t tank_msgq_creat(tank_msgq_t *handler, msgq_size_t size, msgq_len_t len)
 {
     handler->size = size;

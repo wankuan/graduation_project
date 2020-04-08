@@ -11,6 +11,9 @@
 
 #define TANK_MAX_SIZE 256
 
+#define TANK_MSGQ_NORMAL_SIZE 20
+#define TANK_MSGQ_NORMAL_LEN 5
+
 typedef uint16_t tank_queue_id_t;
 typedef uint16_t tank_id_t;
 

@@ -3,6 +3,7 @@
 tank_status_t tank_mm_register(tank_mm_t *handler, uint32_t addr, uint32_t size, const char *name)
 {
     strncpy(handler->name, name, 256);
+    printf("[MM]:%s is register\n", handler->name);
     handler->heap.addr = addr;
     handler->heap.total_size = size;
     handler->heap.pxEnd = NULL;

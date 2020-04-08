@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(in_swap)
+project(inner_service)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set(CMAKE_C_COMPILER gcc)
 # set(CMAKE_OBJCOPY arm-none-eabi-objcopy)
@@ -11,19 +11,21 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fdata-sections -ffunction-sections -g
 
 
 SET(SRCS
-    ./inner_swap.c
-    ./../app_service/my_osal/my_sem.c
-    ./../app_service/tank_msgq/tank_msgq.c
-    ./../app_service/tank_memory/heap_4.c
-    ./../app_service/tank_memory/tank_mm.c
+    ./inner_service.c
+    ./../../tank_map.c
+    ./../../app_service/my_osal/my_sem.c
+    ./../../app_service/tank_msgq/tank_msgq.c
+    ./../../app_service/tank_memory/heap_4.c
+    ./../../app_service/tank_memory/tank_mm.c
 )
 
 include_directories(
     ./
-    ./../app_service/my_osal
-    ./../app_service/tank_msgq
-    ./../app_service/tank_memory
-    ./../app_service
+    ./../../app_service/my_osal
+    ./../../app_service/tank_msgq
+    ./../../app_service/tank_memory
+    ./../../app_service
+    ./../../
     ./../
 )
 
