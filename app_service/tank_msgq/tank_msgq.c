@@ -40,7 +40,9 @@ tank_status_t tank_msgq_recv(tank_msgq_t* handler, void *msg, msgq_len_t len)
     my_sem_get_val(&handler->sem_cur_len, &val);
     my_sem_wait(&handler->sem_cur_len);
     printf("\ntank_msgq_recv  tail:%d cur_len:%d\n\n", handler->tail, val);
+
     memcpy(msg, (&handler->buf + handler->tail*handler->size), len);
+    memset((&handler->buf + handler->tail*handler->size), 0, handler->size);
 
     if(!tank_msgq_is_empty(handler)){
         handler->tail += 1;
@@ -57,7 +59,9 @@ tank_status_t tank_msgq_recv_wait(tank_msgq_t* handler, void *msg, msgq_len_t le
     my_sem_wait(&handler->sem_cur_len);
     my_sem_wait(&handler->sem_rw);
     printf("[MSGQ]recv,tail:%d,cur_len:%d\n", handler->tail, val);
+
     memcpy(msg, (&handler->buf + handler->tail*handler->size), len);
+    memset((&handler->buf + handler->tail*handler->size), 0, handler->size);
 
     if(!tank_msgq_is_empty(handler)){
         handler->tail += 1;
@@ -84,9 +88,11 @@ tank_status_t tank_msgq_send(tank_msgq_t* handler, void *msg, msgq_len_t len)
     int val = 0;
     my_sem_get_val(&handler->sem_cur_len, &val);
     printf("[MSGQ]send,head:%d,cur_len:%d\n", handler->head, val);
+    memset((&handler->buf + handler->head*handler->size), 0, handler->size);
+
     memcpy((&handler->buf + handler->head*handler->size), msg, len);
-    my_sem_post(&handler->sem_cur_len);
     my_sem_post(&handler->sem_rw);
+    my_sem_post(&handler->sem_cur_len);
     return TANK_SUCCESS;
 }
 

@@ -39,6 +39,10 @@ typedef struct{
 }app_heap_get_t;
 
 
+#define APP_MSG_SIZE (sizeof(app_request_type_t)+sizeof(app_send_msg_t))
+#define TANK_MSG_NORMAL_SIZE (20)
+
+
 typedef struct{
     app_request_type_t type;
     union{

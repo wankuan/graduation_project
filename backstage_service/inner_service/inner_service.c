@@ -25,12 +25,14 @@ tank_status_t app_malloc_init(void);
 
 void print_app_info_table(void)
 {
+    printf("=========app_info_table============\n");
     for(int i=0;i<g_app_id_seq;++i){
         printf("[service]id:%d, mm:%p, msgq_r:%p, msgq_s:%p\n",
         app_info_table[i].id, app_info_table[i].heap_addr,
         app_info_table[i].msgq_recv_addr, app_info_table[i].msgq_send_addr
         );
     }
+    printf("=========app_info_table============\n");
 }
 
 
@@ -61,12 +63,30 @@ tank_status_t app_malloc_init(void)
 }
 
 
-void *app_malloca_thread(void *arg)
+int find_id_index(tank_id_t id)
+{
+    tank_id_t index = 0;
+    for(int i=0;i<g_app_id_seq;++i){
+        if(app_info_table[i].id == id){
+            printf("[service]find id index:%d\n", i);
+            return i;
+        }
+    }
+    printf("[service]ERROR, can not find id:%d\n", id);
+    return -1;
+}
+
+void *main_thread(void *arg)
 {
     while(1){
-        sleep(1);
-        tank_msgq_recv_wait(g_service_request_msgq, &g_app_request, 20);
+        memset(&g_app_request, 0, TANK_MSGQ_NORMAL_SIZE);
+        tank_msgq_recv_wait(g_service_request_msgq, &g_app_request, TANK_MSGQ_NORMAL_SIZE);
         if(g_app_request.type == MM_ALLOCATE){
+            int index = find_id_index(g_app_request.heap.id);
+            if(index >= 0){
+                printf("[ERROR]id:%d has been malloc\n", g_app_request.heap.id);
+                continue;
+            }
             printf("\n[app]start malloc\n");
             printf("[app]id:%d, size:%d\n", g_app_request.heap.id, g_app_request.heap.size);
             void *addr = tank_mm_alloc(&g_in_swap_mm, g_app_request.heap.size);
@@ -86,10 +106,24 @@ void *app_malloca_thread(void *arg)
             my_sem_post(&g_app_get->sem);
         }else if(g_app_request.type == PUSH_MSGQ_ADDR){
             printf("[service]id:%d, type:%d, recv_shift:%d, send_shift:%d\n", g_app_request.msgq.id, g_app_request.type, g_app_request.msgq.recv_shift, g_app_request.msgq.send_shift);
-            app_info_table[g_app_request.msgq.id].msgq_recv_addr = (void*)g_app_request.msgq.recv_shift + g_shm_base;
-            app_info_table[g_app_request.msgq.id].msgq_send_addr = (void*)g_app_request.msgq.send_shift + g_shm_base;
+            int index = find_id_index(g_app_request.msgq.id);
+            app_info_table[index].msgq_recv_addr = (void*)g_app_request.msgq.recv_shift + g_shm_base;
+            app_info_table[index].msgq_send_addr = (void*)g_app_request.msgq.send_shift + g_shm_base;
+
+            // memset(&g_app_request, 0, TANK_MSGQ_NORMAL_SIZE);
+            // g_app_request.type = SEND_MSG;
+            // g_app_request.msg.src_id = 10;
+            // g_app_request.msg.dst_id = 1;
+            // g_app_request.msg.state = 5;
+
+            // tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &g_app_request, TANK_MSGQ_NORMAL_SIZE);
+
             print_app_info_table();
         }else if(g_app_request.type == SEND_MSG){
+            int index = find_id_index(g_app_request.msg.dst_id);
+            if(index >= 0){
+                tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &g_app_request, APP_MSG_SIZE);
+            }
             printf("[service]recv a msg, src_id:%d, dst_id:%d, state:%d\n",
                     g_app_request.msg.src_id, g_app_request.msg.dst_id, g_app_request.msg.state
                     );
@@ -106,7 +140,7 @@ void *app_malloca_thread(void *arg)
 int main(int argc, char *argv[])
 {
     inner_service_init();
-    pthread_create(&g_service_pid,NULL,&app_malloca_thread,NULL);
+    pthread_create(&g_service_pid,NULL,&main_thread,NULL);
     pthread_join(g_service_pid,NULL);
     printf("[inner_service]:ending!\n");
     return 0;
