@@ -17,6 +17,8 @@ SET(SRCS
     ./../../app_service/tank_msgq/tank_msgq.c
     ./../../app_service/tank_memory/heap_4.c
     ./../../app_service/tank_memory/tank_mm.c
+    ./../../tank_components/tank_log/tank_log_api.c
+    ./../../tank_components/tank_log/tank_log.c
 )
 
 include_directories(
@@ -26,6 +28,7 @@ include_directories(
     ./../../app_service/tank_memory
     ./../../app_service/tank_app
     ./../../app_service
+    ./../../tank_components/tank_log/
     ./../../
     ./../
 )
