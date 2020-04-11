@@ -59,6 +59,7 @@ typedef enum _log_level_t{
 
 // #define LOG_MAX_LEVEL_SIZE (sizeof(g_tank_log_level_str)/sizeof(g_tank_log_level_str[0]))
 
+typedef uint32_t log_out_level;
 typedef uint32_t log_info_type;
 typedef uint32_t log_out_port;
 
@@ -83,6 +84,7 @@ typedef struct _log_file_t{
 
 typedef struct _log_info_t{
     log_info_type type;
+    log_level_t level;
     log_out_port  port;
 }log_info_t;
 
@@ -94,9 +96,7 @@ typedef struct _tank_log_t{
 
 log_status_t tank_log_constructor(tank_log_t *log_handler);
 log_status_t tank_log_destructor(tank_log_t* log_handler);
-log_status_t tank_log_write(tank_log_t *log_handler, char *app, char *filename, char *fun, log_level_t level, char *fmt, ...);
-
-
+log_status_t tank_log_write(tank_log_t *log_handler, const char *app, const char *filename, const char *fun, log_level_t level, char *fmt, ...);
 
 
 #endif

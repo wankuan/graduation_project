@@ -24,9 +24,10 @@
  *
  * 1 tab == 4 spaces!
  */
-
 #include "heap_4.h"
 
+#include "tank_log_api.h"
+#define FILE_NAME "heap_4"
 
 /* The size of the structure placed at the beginning of each allocated memory
 block must by correctly byte aligned. */
@@ -69,7 +70,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
     initialisation to setup the list of free blocks. */
     if( heap->pxEnd == NULL )
     {
-        // printf("[INFO]first use, heap init\n");
+        // log_info("first use, heap init\n");
         prvHeapInit(heap);
     }
 
@@ -91,7 +92,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
                 /* Byte alignment required. */
                 // 往大的分配，保证是8的倍数
                 xWantedSize += ( portBYTE_ALIGNMENT - ( xWantedSize & portBYTE_ALIGNMENT_MASK ) );
-                printf("[INFO]the size not reach 8 mask\n");
+                log_info("the size not reach 8 mask\n");
             }
         }
         if( ( xWantedSize > 0 ) && ( xWantedSize <= heap->xFreeBytesRemaining ) )
@@ -139,7 +140,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
                 }
                 else
                 {
-                    // printf("[INFO]small block appear, can not split, size:%d\n", pxBlock->xBlockSize - xWantedSize);
+                    // log_info("small block appear, can not split, size:%d\n", pxBlock->xBlockSize - xWantedSize);
                 }
 
                 heap->xFreeBytesRemaining -= pxBlock->xBlockSize;
@@ -147,11 +148,11 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
                 if( heap->xFreeBytesRemaining < heap->xMinimumEverFreeBytesRemaining )
                 {
                     heap->xMinimumEverFreeBytesRemaining = heap->xFreeBytesRemaining;
-                    // printf("[INFO]appear new minum free byte remainning, size:%d\n", heap->xMinimumEverFreeBytesRemaining);
+                    // log_info("appear new minum free byte remainning, size:%d\n", heap->xMinimumEverFreeBytesRemaining);
                 }
                 else
                 {
-                    // printf("[INFO]has allocated remain_size:%d\n", heap->xFreeBytesRemaining);
+                    // log_info("has allocated remain_size:%d\n", heap->xFreeBytesRemaining);
                 }
 
                 /* The block is being returned - it is allocated and owned
@@ -162,22 +163,22 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
             }
             else
             {
-                printf("[ERROR]reach end block %d\n", heap->xFreeBytesRemaining);
+                log_info("[ERROR]reach end block %d\n", heap->xFreeBytesRemaining);
                 return NULL;
             }
         }
         else
         {
-            printf("[ERROR]size over, remain %d\n", heap->xFreeBytesRemaining - xHeapStructSize);
+            log_info("[ERROR]size over, remain %d\n", heap->xFreeBytesRemaining - xHeapStructSize);
             return NULL;
         }
     }
     else
     {
-        printf("[ERROR]size over max %d\n", xBlockAllocatedBit);
+        log_info("[ERROR]size over max %d\n", xBlockAllocatedBit);
         return NULL;
     }
-    printf("[INFO]allocated OK, return:%p, size:%d\n", pvReturn, xWantedSize-xHeapStructSize);
+    log_info("allocated OK, return:%p, size:%d\n", pvReturn, xWantedSize-xHeapStructSize);
     return pvReturn;
 }
 /*-----------------------------------------------------------*/
@@ -186,7 +187,7 @@ void vPortFree(heap_info_t *heap, void *pv)
 {
     uint8_t *puc = ( uint8_t * ) pv;
     BlockLink_t *pxLink;
-    // printf("[INFO]free start addr:%p\n", puc);
+    // log_info("free start addr:%p\n", puc);
     if( pv != NULL )
     {
         /* The memory being freed will have an BlockLink_t structure immediately
@@ -199,11 +200,11 @@ void vPortFree(heap_info_t *heap, void *pv)
         /* Check the block is actually allocated. */
         if((pxLink->xBlockSize & xBlockAllocatedBit )==0)
         {
-            printf("[ERROR]the memory not to allocated\n");
+            log_info("[ERROR]the memory not to allocated\n");
         }
         if( pxLink->pxNextFreeBlock != NULL )
         {
-            printf("[ERROR]the block next not a NULL\n");
+            log_info("[ERROR]the block next not a NULL\n");
         }
 
         if( ( pxLink->xBlockSize & xBlockAllocatedBit ) != 0 )
@@ -223,28 +224,28 @@ void vPortFree(heap_info_t *heap, void *pv)
             }
             else
             {
-                printf("[ERROR]next block not NULL \n");
+                log_info("[ERROR]next block not NULL \n");
             }
         }
         else
         {
-            printf("[ERROR]size over max %d\n", xBlockAllocatedBit);
+            log_info("[ERROR]size over max %d\n", xBlockAllocatedBit);
         }
     }
-    printf("[INFO]free OK, addr:%p\n", pv);
+    log_info("free OK, addr:%p\n", pv);
 }
 /*-----------------------------------------------------------*/
 
 uint32_t xPortGetFreeHeapSize(heap_info_t *heap)
 {
-    printf("[INFO]xFreeBytesRemaining:%d\n", heap->xFreeBytesRemaining);
+    log_info("xFreeBytesRemaining:%d\n", heap->xFreeBytesRemaining);
     return heap->xFreeBytesRemaining;
 }
 /*-----------------------------------------------------------*/
 
 uint32_t xPortGetMinimumEverFreeHeapSize( heap_info_t *heap )
 {
-    printf("[INFO]xMinimumEverFreeBytesRemaining:%d\n", heap->xMinimumEverFreeBytesRemaining);
+    log_info("xMinimumEverFreeBytesRemaining:%d\n", heap->xMinimumEverFreeBytesRemaining);
     return heap->xMinimumEverFreeBytesRemaining;
 }
 /*-----------------------------------------------------------*/
@@ -257,7 +258,7 @@ static void prvHeapInit(heap_info_t *heap)
     uint8_t *pucAlignedHeap;
     uint32_t uxAddress;
     uint32_t xTotalHeapSize = heap->total_size;
-    printf("[INFO]start init heap\n");
+    log_info("start init heap\n");
     /* Ensure the heap starts on a correctly aligned boundary. */
     uxAddress = (uint32_t)heap->addr;
     // 字节对齐  如果首地址不是8字节对齐
@@ -294,8 +295,8 @@ static void prvHeapInit(heap_info_t *heap)
     /* Only one block exists - and it covers the entire usable heap space. */
     heap->xMinimumEverFreeBytesRemaining = pxFirstFreeBlock->xBlockSize;
     heap->xFreeBytesRemaining = pxFirstFreeBlock->xBlockSize;
-    // printf("xHeapStructSize is %d\n", xHeapStructSize);
-    // printf("xFreeBytesRemaining is %d\n", heap->xFreeBytesRemaining );
+    // log_info("xHeapStructSize is %d\n", xHeapStructSize);
+    // log_info("xFreeBytesRemaining is %d\n", heap->xFreeBytesRemaining );
 }
 /*-----------------------------------------------------------*/
 
@@ -303,7 +304,7 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
 {
     BlockLink_t *pxIterator;
     uint8_t *puc;
-    // printf("[INFO]start prvInsertBlockIntoFreeList\n");
+    // log_info("start prvInsertBlockIntoFreeList\n");
     /* Iterate through the list until a block is found that has a higher address
     than the block being inserted. */
     // 寻找当前要插入的地址位置，空闲块在物理地址上从小到大，插入
@@ -320,11 +321,11 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
     {
         pxIterator->xBlockSize += pxBlockToInsert->xBlockSize;
         pxBlockToInsert = pxIterator;
-        // printf("[INFO]the addr continue for last\n");
+        // log_info("the addr continue for last\n");
     }
     else
     {
-        // printf("[INFO]the addr not continue for last\n");
+        // log_info("the addr not continue for last\n");
     }
 
     /* Do the block being inserted, and the block it is being inserted before
@@ -343,12 +344,12 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
         {
             pxBlockToInsert->pxNextFreeBlock = heap->pxEnd;
         }
-        // printf("[INFO]the addr continue for next\n");
+        // log_info("the addr continue for next\n");
     }
     else
     {
         pxBlockToInsert->pxNextFreeBlock = pxIterator->pxNextFreeBlock;
-        // printf("[INFO]the addr not continue for next\n");
+        // log_info("the addr not continue for next\n");
     }
 
     /* If the block being inserted plugged a gab, so was merged with the block
@@ -359,8 +360,8 @@ static void prvInsertBlockIntoFreeList(heap_info_t *heap, BlockLink_t *pxBlockTo
     if( pxIterator != pxBlockToInsert )
     {
         pxIterator->pxNextFreeBlock = pxBlockToInsert;
-        // printf("[INFO]the addr not continue for last/next\n");
+        // log_info("the addr not continue for last/next\n");
     }
-    // printf("[INFO]end prvInsertBlockIntoFreeList\n");
+    // log_info("end prvInsertBlockIntoFreeList\n");
 }
 

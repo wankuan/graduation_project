@@ -30,8 +30,8 @@
 
 extern volatile uint32_t g_shm_base;
 
-
-tank_status_t get_service_base_addr(void);
+tank_status_t tank_creat_shm(void);
+tank_status_t get_shm_base_addr(void);
 tank_status_t get_service_msgq_addr(tank_msgq_t **addr);
 
 

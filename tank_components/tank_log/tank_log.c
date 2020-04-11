@@ -64,11 +64,14 @@ log_status_t tank_log_destructor(tank_log_t *log_handler)
 
 
 // [时间][输出app][文件信息][函数信息][日志等级]:日志
-log_status_t tank_log_write(tank_log_t *log_handler, char *app, char *filename, char *fun, log_level_t level, char *fmt, ...)
+log_status_t tank_log_write(tank_log_t *log_handler, const char *app, const char *filename, const char *fun, log_level_t level, char *fmt, ...)
 {
     uint32_t log_info;
     uint32_t write_len = 0;
     char log_buffer[LOG_SINGLE_WIDTH];
+    if(level < log_handler->info_handler.level){
+        return TANK_SUCCESS;
+    }
     log_info = log_handler->info_handler.type&LOG_INFO_MASK;
     if(log_info&LOG_INFO_TIME){
         uint8_t time_buffer[LOG_INFO_TIME_WIDTH];

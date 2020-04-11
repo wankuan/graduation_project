@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 #define __LINUX__
-
+#define TANK_DEBUG
 #define TANK_MAX_SIZE 256
 
 #define TANK_MSGQ_NORMAL_SIZE 20

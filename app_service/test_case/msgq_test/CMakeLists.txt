@@ -17,7 +17,10 @@ SET(SRCS
     ./../../tank_msgq/tank_msgq.c
     ./../../tank_memory/heap_4.c
     ./../../tank_memory/tank_mm.c
+    ./../../../tank_components/tank_log/tank_log_api.c
+    ./../../../tank_components/tank_log/tank_log.c
 )
+
 
 include_directories(
     ./
@@ -27,6 +30,7 @@ include_directories(
     ./../../../backstage_service
     ./../..
     ./../../..
+    ./../../../tank_components/tank_log
 )
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})

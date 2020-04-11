@@ -32,7 +32,7 @@ typedef struct{
     msgq_size_t size;
     msgq_len_t head;
     msgq_len_t tail;
-    void  *buf;
+    uint16_t   buf_shift;
 }tank_msgq_t;
 
 typedef struct{

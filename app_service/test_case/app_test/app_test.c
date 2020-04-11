@@ -3,6 +3,8 @@
 #include "pthread.h"
 ta_info_t app[10];
 
+#include "tank_log_api.h"
+#define FILE_NAME "app_test"
 
 char name_buf[10][8]={
     "app-0",
@@ -17,13 +19,17 @@ char name_buf[10][8]={
     "app-9",
 };
 
+
+
+
+
 int len = sizeof(name_buf)/sizeof(name_buf[0]);
 
 void *test1(void *arg)
 {
     for(int i=0;i<2;++i){
     tank_app_creat(&app[i], i, 0, 0);
-    printf("\n\n\n");
+    log_info("\n\n\n");
     }
     return NULL;
 }
@@ -45,7 +51,12 @@ int main(int argc, char *argv[])
     pthread_t my_pid_t;
     if(argc == 2){
         if(!strncmp(argv[1], "send", 1024)){
-            printf("[APP]sender\n");
+            tank_log_init(&mylog, "app_sender",2048, LEVEL_DEBUG,
+                    LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
+                    PORT_FILE|PORT_SHELL
+                    );
+            log_info("========logger start===========\n");
+            log_info("sender\n");
             tank_app_creat(&app[0], 0, 0, 0);
             while(1){
                 for(int i=0;i<10;i++){
@@ -54,13 +65,17 @@ int main(int argc, char *argv[])
                 sleep(1);
             }
         }else if(!strncmp(argv[1], "recv", 1024)){
-            printf("[APP]receiver\n");
+            tank_log_init(&mylog, "app_reciver",2048, LEVEL_DEBUG,
+                    LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
+                    PORT_FILE|PORT_SHELL
+                    );
+            log_info("========logger start===========\n");
+            log_info("receiver\n");
             tank_app_creat(&app[0], 1, 0, 0);
             while(1){
                 tank_id_t src_id = 0;
                 tcp_state_t state = 0;
                 tank_app_recv_wait(&app[0], &src_id, &state);
-                sleep(1);
             }
             goto exit;
         }else{
@@ -76,9 +91,9 @@ exit:
     // // pthread_create(&my_pid_t,NULL,&test3,NULL);
 
     // pthread_join(my_pid_t,NULL);
-    printf("end running\n");
+    log_info("end running\n");
     return 0;
 error:
-    printf("input error\n ./a.out send/recv\n");
+    log_error("input error\n ./a.out send/recv\n");
     return -1;
 }

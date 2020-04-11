@@ -1,3 +1,6 @@
+
+
+
 cmake_minimum_required(VERSION 3.10)
 project(inner_service)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -28,9 +31,9 @@ include_directories(
     ./../../app_service/tank_memory
     ./../../app_service/tank_app
     ./../../app_service
-    ./../../tank_components/tank_log/
     ./../../
     ./../
+    ./../../tank_components/tank_log
 )
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})

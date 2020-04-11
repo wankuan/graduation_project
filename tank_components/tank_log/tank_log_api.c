@@ -17,16 +17,16 @@ static log_status_t get_current_time_str(char *p_timer)
 
 
 
-tank_status_t tank_log_init(tank_log_t *log_handler, char *filename, uint32_t size, log_info_type info_type, log_out_port port)
+tank_status_t tank_log_init(tank_log_t *log_handler, char *filename, uint32_t size, log_level_t level, log_info_type info_type, log_out_port port)
 {
     log_status_t status;
     log_handler->file_handler.size = size;
     log_handler->info_handler.type = info_type;
     log_handler->info_handler.port = port;
-
+    log_handler->info_handler.level = level;
     char time[32];
     get_current_time_str(time);
-    snprintf(log_handler->file_handler.name, 256, "%s_%s.log",filename, time);
+    snprintf(log_handler->file_handler.name, 256, "/home/wankuan/my_workspace/graduation_project/log/%s_%s.log",filename, time);
     status = tank_log_constructor(log_handler);
     if (status != LOG_SUCCESS){
         return TANK_FAIL;
