@@ -134,10 +134,10 @@ void *main_thread(void *arg)
                 log_error("can not find id:%d\n", info.msgq.id);
                 continue;
             }
-            // tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, APP_MSG_SIZE);
-            // log_info("src_id:%d, dst_id:%d, state:%d\n",
-            //         info.msg.src_id, info.msg.dst_id, info.msg.state
-            //         );
+            tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, APP_MSG_SIZE);
+            log_info("src_id:%d, dst_id:%d, state:%d\n",
+                    info.msg.src_id, info.msg.dst_id, info.msg.state
+                    );
             log_info("======app send messgae exit======\n");
         }
 

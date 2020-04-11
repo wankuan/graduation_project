@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
             log_info("sender\n");
             tank_app_creat(&app[0], 0, 0, 0);
             while(1){
-                for(int i=0;i<10;i++){
+                for(int i=0;i<4;i++){
                     tank_app_send(&app[0], 1, i);
                 }
                 sleep(1);
