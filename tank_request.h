@@ -14,7 +14,7 @@ typedef struct{
 typedef struct{
     tank_id_t src_id;
     tank_id_t dst_id;
-    tcp_state_t state;
+    tcp_header_flag_t flag;
 }app_send_msg_t;
 
 

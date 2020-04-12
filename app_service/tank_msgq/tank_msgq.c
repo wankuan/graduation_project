@@ -13,7 +13,6 @@ tank_status_t tank_msgq_creat(tank_msgq_t *handler, msgq_size_t size, msgq_len_t
     handler->head = 0;
     handler->tail = 0;
     handler->buf_shift = sizeof(tank_msgq_t);
-    printf("buf_addr:%p\n", handler + handler->buf_shift);
     my_sem_creat(&handler->sem_rw, 1);
     my_sem_creat(&handler->sem_cur_len, 0);
     if(handler->buf_shift == 0){
@@ -58,7 +57,6 @@ tank_status_t tank_msgq_recv(tank_msgq_t* handler, void *msg, msgq_len_t len)
 tank_status_t tank_msgq_recv_wait(tank_msgq_t* handler, void *msg, msgq_len_t len)
 {
     int val = 0;
-    log_debug("into recv\n");
     my_sem_get_val(&handler->sem_cur_len, &val);
     my_sem_wait(&handler->sem_cur_len);
     my_sem_wait(&handler->sem_rw);
@@ -90,12 +88,6 @@ tank_status_t tank_msgq_send(tank_msgq_t* handler, void *msg, msgq_len_t len)
         handler->head += 1;
         handler->head %= handler->len;
     }
-    printf("send:");
-    uint8_t *buf2 = (uint8_t*)msg;
-    for(int i=0;i<20;i++){
-        printf("0x%x ", buf2[i]);
-    }
-    printf("\n");
     int val = 0;
     my_sem_get_val(&handler->sem_cur_len, &val);
     log_debug("send,head:%d,cur_len:%d\n", handler->head, val);

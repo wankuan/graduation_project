@@ -65,7 +65,7 @@ void *recv(void *arg)
 int main(int argc, char *argv[])
 {
 
-    tank_log_init(&mylog, "msgq",2048, LEVEL_DEBUG,
+    tank_log_init(&mylog, "msgq",2048, LEVEL_INFO,
                 LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
                 PORT_FILE
                 );

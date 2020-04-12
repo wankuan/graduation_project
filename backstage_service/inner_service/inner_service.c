@@ -8,7 +8,7 @@
 #include "inner_service.h"
 
 app_info_t               app_info_table[256];
-tank_id_t                app_lut[256];
+tank_id_t                app_id_lut[10] = {0,1,2,3,4,5,6,7,8,9};
 
 uint16_t                 g_app_id_seq = 0;
 tank_mm_t                g_in_swap_mm;
@@ -67,13 +67,12 @@ tank_status_t app_malloc_init(void)
     return TANK_SUCCESS;
 }
 
-
 int find_id_index(tank_id_t id)
 {
     tank_id_t index = 0;
     for(int i=0;i<g_app_id_seq;++i){
         if(app_info_table[i].id == id){
-            log_info("find id index:%d\n", i);
+            log_debug("find id index:%d\n", i);
             return i;
         }
     }
@@ -81,16 +80,26 @@ int find_id_index(tank_id_t id)
 }
 
 
-uint32_t total_cnt = 0;
+tank_status_t check_systemid(tank_id_t id)
+{
+    tank_id_t len = sizeof(app_id_lut)/sizeof(app_id_lut[0]);
+    for(int i=0;i<len;++i){
+        if(app_id_lut[i] == id){
+            return TANK_SUCCESS;
+        }
+    }
+    log_error("id:%d not in current system\n", id);
+    return TANK_FAIL;
+}
+
+
 
 void *main_thread(void *arg)
 {
-    volatile app_request_info_t info;
+    app_request_info_t info;
     while(1){
         memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
         tank_msgq_recv_wait(g_service_request_msgq, &info, TANK_MSGQ_NORMAL_SIZE);
-        total_cnt++;
-        log_info("cnt:%d\n", total_cnt);
         if(info.type == MM_ALLOCATE){
             log_info("======app allocate start======\n");
             log_info("id:%d, size:%d\n", info.heap.id, info.heap.size);
@@ -128,17 +137,17 @@ void *main_thread(void *arg)
             print_app_info_table();
 
         }else if(info.type == SEND_MSG){
-            log_info("======app send messgae start======\n");
+            log_info("======app msg transmit start======\n");
             int index = find_id_index(info.msg.dst_id);
             if(index < 0){
                 log_error("can not find id:%d\n", info.msgq.id);
                 continue;
             }
             tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, APP_MSG_SIZE);
-            log_info("src_id:%d, dst_id:%d, state:%d\n",
-                    info.msg.src_id, info.msg.dst_id, info.msg.state
+            log_info("src_id:%d, dst_id:%d, flag:%d\n",
+                    info.msg.src_id, info.msg.dst_id, info.msg.flag
                     );
-            log_info("======app send messgae exit======\n");
+            log_info("======app msg transmit exit======\n");
         }
 
     }
@@ -151,7 +160,7 @@ void *main_thread(void *arg)
 
 int main(int argc, char *argv[])
 {
-    tank_log_init(&mylog, "inner",2048, LEVEL_DEBUG,
+    tank_log_init(&mylog, "inner",2048, LEVEL_INFO,
                 LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
                 PORT_FILE|PORT_SHELL
                 );

@@ -12,7 +12,7 @@ typedef uint16_t ta_id_t;
 typedef uint16_t ta_msg_len_t;
 
 #define TA_HOST_MAX 10
-#define TA_NAME_SIZE_MAX 8
+#define TA_NAME_SIZE_MAX 32
 
 typedef enum {
     CLOSED      = 0,
@@ -27,6 +27,19 @@ typedef enum {
     LAST_ACK    = 9,
     TIME_WAIT   = 10
 }tcp_state_t;
+
+
+/* TCP header flags bits */
+typedef enum{
+    TCP_NON = 0x00U,
+    TCP_FIN = 0x01U,
+    TCP_SYN = 0x02U,
+    TCP_RST = 0x04U,
+    TCP_PSH = 0x08U,
+    TCP_ACK = 0x10U,
+    TCP_URG = 0x20U,
+}tcp_header_flag_t;
+
 
 typedef struct{
     addr_t addr;
@@ -59,12 +72,19 @@ typedef struct{
     };
 }ta_connect_status_t;
 
+
+typedef struct{
+    tank_id_t id;
+    tank_id_t index;
+}ta_index_lut_t;
+
 typedef struct{
     ta_id_t             id;
     ta_addr_t           addr;
     ta_protocol_t       protocol;
     ta_type_t           type;
     char                name[TA_NAME_SIZE_MAX];
+    ta_index_lut_t      index_lut[TA_HOST_MAX];
     ta_connect_status_t connect_status[TA_HOST_MAX];
     tank_mm_t           mm_handler;
     tank_msgq_t         *sender;

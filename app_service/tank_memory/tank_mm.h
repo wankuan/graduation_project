@@ -9,7 +9,7 @@
 
 typedef struct{
     my_sem_t sem;
-    char name[32];
+    char name[64];
     heap_info_t heap;
 }tank_mm_t;
 

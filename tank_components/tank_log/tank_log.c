@@ -122,6 +122,7 @@ log_status_t tank_log_write(tank_log_t *log_handler, const char *app, const char
 static log_status_t write_file(FILE *fp, char *buffer)
 {
     if (fp == NULL_PTR){
+        printf("[ERROR]fp NULL_PTR\n");
         return LOG_FAIL;
     }
     fprintf(fp, "%s", buffer);
