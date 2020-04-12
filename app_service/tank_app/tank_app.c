@@ -17,13 +17,13 @@ app_request_info_t info;
 #define FILE_NAME "tank_app"
 
 static tank_status_t find_tcp_state_index(ta_info_t *ta, tank_id_t id, tank_id_t *index);
+static tank_status_t creat_ta_id(ta_info_t *ta, tank_id_t id);
+
 
 tank_status_t find_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t *state)
 {
     tank_id_t index = 0;
-    if(find_tcp_state_index(ta, id, &index) == TANK_FAIL){
-        return TANK_FAIL;
-    }
+    find_tcp_state_index(ta, id, &index);
     log_debug("[find_tcp_state]id:%d state:%d\n", id, ta->connect_status[index].state);
     *state = ta->connect_status[index].state;
     return TANK_SUCCESS;
@@ -31,25 +31,49 @@ tank_status_t find_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t *state)
 tank_status_t write_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t state)
 {
     tank_id_t index = 0;
-    if(find_tcp_state_index(ta, id, &index) == TANK_FAIL){
-        return TANK_FAIL;
-    }
+    find_tcp_state_index(ta, id, &index);
     log_info("[write_tcp_state]id:%d cur state:%d, next state:%d\n", id, ta->connect_status[index].state, state);
     ta->connect_status[index].state = state;
     return TANK_SUCCESS;
 }
 
-
-static tank_status_t find_tcp_state_index(ta_info_t *ta, tank_id_t id, tank_id_t *index)
+static tank_status_t creat_ta_id(ta_info_t *ta, tank_id_t id)
 {
-    for(int i=0;i<TA_HOST_MAX;i++){
+    if(check_ta_id_exist(ta, id) == TANK_SUCCESS){
+        return TANK_FAIL;
+    }
+    ta->index_lut[ta->cur_index].id = id;
+    ta->index_lut[ta->cur_index].index = ta->cur_index;
+    ta->cur_index += 1;
+    return TANK_SUCCESS;
+}
+
+tank_status_t tank_app_listen(ta_info_t *ta, tank_id_t id)
+{
+    creat_ta_id(ta, id);
+    write_tcp_state(ta, id, LISTEN);
+    return TANK_SUCCESS;
+}
+
+tank_status_t check_ta_id_exist(ta_info_t *ta, tank_id_t id)
+{
+    for(int i=0; i<ta->cur_index; i++){
         if(ta->index_lut[i].id == id){
-            *index = ta->index_lut[i].index;
-            log_debug("[index]id:%d index:%d\n", id, *index);
             return TANK_SUCCESS;
         }
     }
-    log_error("[index]can not find\n");
+    return TANK_FAIL;
+}
+static tank_status_t find_tcp_state_index(ta_info_t *ta, tank_id_t id, tank_id_t *index)
+{
+    for(int i=0; i<ta->cur_index; i++){
+        if(ta->index_lut[i].id == id){
+            *index = ta->index_lut[i].index;
+            log_debug("[find_index]id:%d index:%d\n", id, *index);
+            return TANK_SUCCESS;
+        }
+    }
+    log_error("[find_index]can not find id:%d\n", id);
     return TANK_FAIL;
 }
 
@@ -57,6 +81,7 @@ tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol
 {
     log_info("============ app init start ===========\n");
     memset(ta, 0, sizeof(ta_info_t));
+    ta->cur_index = 0;
     ta->id = id;
     ta->protocol = protocol;
     ta->type = type;

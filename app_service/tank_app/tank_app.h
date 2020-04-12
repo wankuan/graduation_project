@@ -3,6 +3,9 @@
 
 #include "tank_app_pub.h"
 
+tank_status_t check_ta_id_exist(ta_info_t *ta, tank_id_t id);
+tank_status_t tank_app_listen(ta_info_t *ta, tank_id_t id);
+
 tank_status_t find_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t *state);
 tank_status_t write_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t state);
 

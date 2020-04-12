@@ -25,7 +25,8 @@ typedef enum {
     CLOSE_WAIT  = 7,
     CLOSING     = 8,
     LAST_ACK    = 9,
-    TIME_WAIT   = 10
+    TIME_WAIT   = 10,
+    ALL
 }tcp_state_t;
 
 
@@ -38,6 +39,7 @@ typedef enum{
     TCP_PSH = 0x08U,
     TCP_ACK = 0x10U,
     TCP_URG = 0x20U,
+    TCP_ID_INVALID = 0x40U,
 }tcp_header_flag_t;
 
 
@@ -85,6 +87,7 @@ typedef struct{
     ta_type_t           type;
     char                name[TA_NAME_SIZE_MAX];
     ta_index_lut_t      index_lut[TA_HOST_MAX];
+    tank_id_t           cur_index;
     ta_connect_status_t connect_status[TA_HOST_MAX];
     tank_mm_t           mm_handler;
     tank_msgq_t         *sender;

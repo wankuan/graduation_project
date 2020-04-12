@@ -32,44 +32,52 @@ int count = 0;
 int main(int argc, char *argv[])
 {
     pthread_t my_pid_t;
-    if(argc == 2){
+    if(argc == 4){
+        long src_id = atol(argv[2]);
+        long dst_id = atol(argv[3]);
         if(!strncmp(argv[1], "send", 1024)){
-            tank_log_init(&mylog, "app_sender",2048, LEVEL_INFO,
+            tank_log_init(&mylog, "app_sender",2048, LEVEL_DEBUG,
                     LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
                     PORT_FILE|PORT_SHELL
                     );
             log_info("========logger start===========\n");
             log_info("sender\n");
-            tank_app_creat(&app_demo, 1, 0, 0);
+            tank_app_creat(&app_demo, src_id, 0, 0);
                 // for(int i=0;i<4;i++){
                 //     tank_app_send(&app_demo, 1, i);
                 // }
                 // sleep(1);
-            app_demo.index_lut[0].id = 2;
+            app_demo.index_lut[0].id = dst_id;
             app_demo.index_lut[0].index = 0;
-            write_tcp_state(&app_demo, 2, SYN_SENT);
+            app_demo.cur_index += 1;
+            write_tcp_state(&app_demo, dst_id, SYN_SENT);
             log_info("start TCP shake hands\n");
             pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
-            tank_app_send(&app_demo, 2, TCP_SYN);
+            tank_app_send(&app_demo, dst_id, TCP_SYN);
             sleep(2);
             log_info("start TCP closed\n");
-            write_tcp_state(&app_demo, 2, FIN_WAIT_1);
-            tank_app_send(&app_demo, 2, TCP_FIN);
+            write_tcp_state(&app_demo, dst_id, FIN_WAIT_1);
+            tank_app_send(&app_demo, dst_id, TCP_FIN);
 
             pthread_join(my_pid_t,NULL);
         }else if(!strncmp(argv[1], "recv", 1024)){
-            tank_log_init(&mylog, "app_reciver",2048, LEVEL_INFO,
+            tank_log_init(&mylog, "app_reciver",2048, LEVEL_DEBUG,
                     LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
                     PORT_FILE|PORT_SHELL
                     );
             log_info("========logger start===========\n");
-            tank_app_creat(&app_demo, 2, 0, 0);
+            tank_app_creat(&app_demo, src_id, 0, 0);
+            for(int i=0;i<10;++i){
+                if(i != src_id){
+                    tank_app_listen(&app_demo, i);
+                }
+            }
             // tank_id_t src_id = 0;
             // tcp_state_t state = 0;
             // tank_app_recv_wait(&app_demo, &src_id, &state);
-            app_demo.index_lut[0].id = 1;
-            app_demo.index_lut[0].index = 0;
-            write_tcp_state(&app_demo, 1, LISTEN);
+            // app_demo.index_lut[0].id = 1;
+            // app_demo.index_lut[0].index = 0;
+            // write_tcp_state(&app_demo, dst_id, LISTEN);
             log_info("start TCP shake hands\n");
             pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
             pthread_join(my_pid_t,NULL);
@@ -87,6 +95,6 @@ exit:
     log_info("end running\n");
     return 0;
 error:
-    log_error("input error\n ./a.out send/recv\n");
+    log_error("input error\n ./a.out send/recv id_self id_dst\n");
     return -1;
 }
