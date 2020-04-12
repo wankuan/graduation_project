@@ -48,8 +48,14 @@ int main(int argc, char *argv[])
             app_demo.index_lut[0].id = 2;
             app_demo.index_lut[0].index = 0;
             write_tcp_state(&app_demo, 2, SYN_SENT);
+            log_info("start TCP shake hands\n");
             pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
             tank_app_send(&app_demo, 2, TCP_SYN);
+            sleep(2);
+            log_info("start TCP closed\n");
+            write_tcp_state(&app_demo, 2, FIN_WAIT_1);
+            tank_app_send(&app_demo, 2, TCP_FIN);
+
             pthread_join(my_pid_t,NULL);
         }else if(!strncmp(argv[1], "recv", 1024)){
             tank_log_init(&mylog, "app_reciver",2048, LEVEL_INFO,
@@ -64,6 +70,7 @@ int main(int argc, char *argv[])
             app_demo.index_lut[0].id = 1;
             app_demo.index_lut[0].index = 0;
             write_tcp_state(&app_demo, 1, LISTEN);
+            log_info("start TCP shake hands\n");
             pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
             pthread_join(my_pid_t,NULL);
             goto exit;
