@@ -18,6 +18,9 @@ tank_msgq_t             *g_service_request_msgq;
 app_heap_get_t          *g_app_get;
 app_request_info_t               g_app_request;
 
+app_package_t app_package_info[100] = {0};
+uint16_t       g_app_package_seq = 0;
+
 
 #include "tank_log_api.h"
 #define FILE_NAME "inner_service"
@@ -26,6 +29,16 @@ app_request_info_t               g_app_request;
 tank_status_t app_malloc_init(void);
 
 
+app_package_t* find_package_info(tank_id_t package_id)
+{
+    for(int i=0;i<g_app_package_seq;++i){
+        if(app_package_info[i].package_id == package_id){
+            log_debug("find package_id id:%d\n", package_id);
+            return &app_package_info[i];
+        }
+    }
+    return NULL;
+}
 
 void print_app_info_table(void)
 {
@@ -69,7 +82,6 @@ tank_status_t app_malloc_init(void)
 
 int find_id_index(tank_id_t id)
 {
-    tank_id_t index = 0;
     for(int i=0;i<g_app_id_seq;++i){
         if(app_info_table[i].id == id){
             log_debug("find id index:%d\n", i);
@@ -122,7 +134,7 @@ void *main_thread(void *arg)
 
             log_info("======app allocate exit======\n");
             my_sem_post(&g_app_get->sem);
-        }else if(info.type == PUSH_MSGQ_ADDR){
+        }else if(info.type == APP_PUSH_MSGQ_ADDR){
             log_info("======app push msgq start======\n");
             log_info("id:%d, type:%d, recv_shift:%d, send_shift:%d\n", info.msgq.id, info.type, info.msgq.recv_shift, info.msgq.send_shift);
             int index = find_id_index(info.msgq.id);
@@ -136,11 +148,11 @@ void *main_thread(void *arg)
             log_info("======app push msgq exit======\n");
             print_app_info_table();
 
-        }else if(info.type == SEND_MSG){
+        }else if(info.type == APP_SEND_MSG){
             log_info("======app msg transmit start======\n");
             int index = find_id_index(info.msg.dst_id);
             if(index < 0){
-                log_error("can not find id:%d\n", info.msgq.id);
+                log_error("can not find id:%d\n", info.msg.dst_id);
                 continue;
             }
             tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, APP_MSG_SIZE);
@@ -148,8 +160,71 @@ void *main_thread(void *arg)
                     info.msg.src_id, info.msg.dst_id, info.msg.flag
                     );
             log_info("======app msg transmit exit======\n");
-        }
+        }else if(info.type == APP_SEND_PACKAGE_REQUEST){
+            log_info("======APP_SEND_PACKAGE_REQUEST start======\n");
+            int index = find_id_index(info.send_package_request.dst_id);
+            if(index < 0){
+                log_error("can not find id:%d\n", info.send_package_request.dst_id);
+                continue;
+            }
 
+            app_package_info[g_app_package_seq].src_id = info.send_package_request.src_id;
+            app_package_info[g_app_package_seq].dst_id = info.send_package_request.dst_id;
+            app_package_info[g_app_package_seq].package_id = info.send_package_request.package_id;
+            app_package_info[g_app_package_seq].size = info.send_package_request.size;
+            log_info("start malloc package\n");
+            void *addr = tank_mm_alloc(&g_in_swap_mm, info.send_package_request.size);
+            uint32_t add_shift = (uint32_t)addr - g_shm_base;
+            app_package_info[g_app_package_seq].addr_shift = add_shift;
+
+            log_info("ALLOCATE INFO:src_id:%d, dst_id:%d, package_id:%d, size:%d, addr_shift:%d\n",
+                    app_package_info[g_app_package_seq].src_id, app_package_info[g_app_package_seq].dst_id,
+                    app_package_info[g_app_package_seq].package_id, app_package_info[g_app_package_seq].size,
+                    app_package_info[g_app_package_seq].addr_shift
+                    );
+            log_info("======APP_SEND_PACKAGE_REQUEST exit======\n");
+
+            memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+            log_info("======APP_GET_PACKAGE_ALLOCATE start======\n");
+            index =  find_id_index(app_package_info[g_app_package_seq].src_id);
+            info.type = APP_GET_PACKAGE_ALLOCATE;
+            info.send_package_allocate.addr_shift = add_shift;
+            info.send_package_allocate.dst_id = app_package_info[g_app_package_seq].src_id;
+            info.send_package_allocate.package_id = app_package_info[g_app_package_seq].package_id;
+            tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
+
+            log_info("======APP_GET_PACKAGE_ALLOCATE exit======\n");
+
+            g_app_package_seq += 1;
+        }else if(info.type == APP_SEND_PACKAGE_FINISHED){
+            log_info("======APP_SEND_PACKAGE_FINISHED start======\n");
+            // int index = find_id_index(info.send_package_request.dst_id);
+            // if(index < 0){
+            //     log_error("can not find id:%d\n", info.send_package_request.dst_id);
+            //     continue;
+            // }
+
+            // app_package_info[g_app_package_seq].src_id = info.send_package_request.src_id;
+            // app_package_info[g_app_package_seq].dst_id = info.send_package_request.dst_id;
+            // app_package_info[g_app_package_seq].package_id = info.send_package_request.package_id;
+            // app_package_info[g_app_package_seq].size = info.send_package_request.size;
+            // log_info("start malloc package\n");
+            // void *addr = tank_mm_alloc(&g_in_swap_mm, info.send_package_request.size);
+            // uint32_t add_shift = (uint32_t)addr - g_shm_base;
+            // app_package_info[g_app_package_seq].addr_shift = add_shift;
+
+            // log_info("ALLOCATE INFO:src_id:%d, dst_id:%d, package_id:%d, size:%d, addr_shift:%d\n",
+            //         app_package_info[g_app_package_seq].src_id, app_package_info[g_app_package_seq].dst_id,
+            //         app_package_info[g_app_package_seq].package_id, app_package_info[g_app_package_seq].size,
+            //         app_package_info[g_app_package_seq].addr_shift
+            //         );
+            log_info("======APP_SEND_PACKAGE_FINISHED exit======\n");
+            // g_app_package_seq += 1;
+        }else if(info.type == APP_GET_PACKAGE_PUSH){
+
+        }else{
+
+        }
     }
     return NULL;
 }
@@ -165,6 +240,7 @@ int main(int argc, char *argv[])
                 PORT_FILE|PORT_SHELL
                 );
     log_info("========logger start===========\n");
+    printf("app_request_info_t size:%d\n", sizeof(app_request_info_t));
     inner_service_init();
     pthread_create(&g_service_pid,NULL,&main_thread,NULL);
     pthread_join(g_service_pid,NULL);

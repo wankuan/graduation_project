@@ -11,11 +11,15 @@ tank_status_t write_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t state);
 
 
 tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type);
-tank_status_t tank_app_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t flag);
+tank_status_t tank_app_send_msg(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t flag);
 
 
-tank_status_t tank_app_recv(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag);
-tank_status_t tank_app_recv_wait(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag);
+tank_status_t tank_app_recv_msg(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag);
+tank_status_t tank_app_recv_msg_wait(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag);
+
+
+tank_status_t tank_app_send_package_request(ta_info_t *ta, tank_id_t dst_id, void *package, uint32_t size);
+tank_status_t tank_app_recv_package_wait(ta_info_t *ta, tank_id_t *src_id, void *package, uint32_t *size, uint32_t max_size);
 // ta_id_t         ta_socket_creat(ta_protocol_t protocol, ta_type_t type);
 // tank_status_t     ta_connect(ta_id_t id, ta_addr_t addr);
 // tank_status_t     ta_bind(ta_id_t id, ta_addr_t addr);

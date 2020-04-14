@@ -3,6 +3,8 @@
 #include "tank_msgq.h"
 #include "tank_map.h"
 #include "tank_request.h"
+#include "tank_ID.h"
+
 
 #define APP_HEAP_SIZE 1024
 static tank_status_t app_allocate_heap(ta_info_t *ta);
@@ -91,14 +93,117 @@ tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol
     log_info("============ app init OK ===========\n");
     return TANK_SUCCESS;
 }
-tank_status_t tank_app_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t flag)
+tank_status_t tank_app_send_package_request(ta_info_t *ta, tank_id_t dst_id, void *package, uint32_t size)
+{
+
+    static uint32_t app_package_id = 10;
+    memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+    info.type = APP_SEND_PACKAGE_REQUEST;
+    info.send_package_request.src_id = ta->id;
+    info.send_package_request.dst_id = dst_id;
+    info.send_package_request.package_id = app_package_id + dst_id;
+    info.send_package_request.size = size;
+    tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
+    log_info("[%s]tank_app_send_package_request, src_id:%d, package_id:%d, size:%d\n",
+            ta->name, ta->id, app_package_id, size
+            );
+
+
+    addr_t addr;
+    memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+    tank_msgq_recv_wait(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE);
+
+    uint32_t package_id = info.send_package_allocate.package_id;
+    addr_shift_t addr_shift = info.send_package_allocate.addr_shift;
+    if(info.type == APP_GET_PACKAGE_ALLOCATE){
+        if(info.send_package_allocate.dst_id == ta->id){
+            addr = addr_shift + g_shm_base;
+            package_id = info.send_package_allocate.package_id;
+        }else{
+            log_info("[%s]recv id is error, app_recv_package_allocate dst id %d\n", ta->name, info.send_package_allocate.dst_id);
+            return TANK_FAIL;
+        }
+    }else{
+        log_info("[%s]recv type is error\n", ta->name);
+        return TANK_FAIL;
+    }
+    log_info("[%s]APP_GET_PACKAGE_ALLOCATE, package_id:%d shift:%d\n", ta->name, package_id, addr_shift);
+
+    memcpy((void*)addr, package, size);
+    printf("running here 1\n");
+    memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+    printf("running here 2\n");
+    info.type = APP_SEND_PACKAGE_FINISHED;
+    info.send_package_finshed.package_id = package_id;
+    tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
+    log_info("[%s]tank_app_send_package_finshed, package_id:%d\n", ta->name, package_id);
+
+    app_package_id += 1;
+    return TANK_SUCCESS;
+}
+
+tank_status_t tank_app_recv_package_wait(ta_info_t *ta, tank_id_t *src_id, void *package, uint32_t *size, uint32_t max_size)
+{
+    app_request_info_t info;
+    uint32_t package_id;
+    addr_t addr;
+    addr_shift_t addr_shift;
+    memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+    tank_msgq_recv_wait(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE);
+
+    if(info.type == APP_GET_PACKAGE_PUSH){
+        if(info.get_package_push.dst_id == ta->id){
+            *src_id = info.get_package_push.src_id;
+            package_id = info.get_package_push.package_id;
+            *size = info.get_package_push.size;
+            addr_shift = info.get_package_push.addr_shift;
+            addr = info.get_package_push.addr_shift + g_shm_base;
+        }else{
+            log_info("[%s]recv id is error, tank_app_recv_package_wait dst id %d\n", ta->name, info.get_package_push.dst_id);
+            return TANK_FAIL;
+        }
+    }else{
+        log_info("[%s]recv type is error\n", ta->name);
+        return TANK_FAIL;
+    }
+    log_info("[%s]tank_app_recv_package_wait, src_id:%d, dst_id:%d, package_id:%d, size:%d, shift:%d\n",
+    ta->name, *src_id, ta->id, package_id, *size, addr_shift);
+
+    memcpy(package, (void*)addr, *size);
+
+    memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+    info.type = APP_GET_PACKAGE_FINISHED;
+    info.get_package_finished.package_id = package_id;
+    tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
+    log_info("[%s]get_package_finished, package_id:%d\n", package_id);
+    return TANK_SUCCESS;
+}
+// tank_status_t tank_app_send_package_wait(ta_info_t *ta, tank_id_t dst_id, void* buf, uint32_t size, uint16_t timeout)
+// {
+//     app_request_info_t info;
+//     if(ta->id == dst_id){
+//         log_error("dst ID is self ID, check it!\n");
+//         return TANK_FAIL;
+//     }
+//     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+//     info.type = APP_SEND_PACKAGE;
+//     info.package.src_id = ta->id;
+//     info.package.dst_id = INNER_SERVICE_ID;
+//     info.package.
+//     tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
+//     log_info("[%s]send a msg, src_id:%d, dst_id:%d, flag:%d\n",
+//             ta->name, ta->id, dst_id, flag
+//             );
+//     return TANK_SUCCESS;
+// }
+tank_status_t tank_app_send_msg(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t flag)
 {
     app_request_info_t info;
     if(ta->id == dst_id){
         return TANK_FAIL;
     }
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
-    info.type = SEND_MSG;
+    info.type = APP_SEND_MSG;
     info.msg.src_id = ta->id;
     info.msg.dst_id = dst_id;
     info.msg.flag = flag;
@@ -109,14 +214,14 @@ tank_status_t tank_app_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t f
     return TANK_SUCCESS;
 }
 
-tank_status_t tank_app_recv(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag)
+tank_status_t tank_app_recv_msg(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag)
 {
     app_request_info_t info;
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     if(tank_msgq_recv(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE) == TANK_FAIL){
         return TANK_FAIL;
     }
-    if(info.type == SEND_MSG){
+    if(info.type == APP_SEND_MSG){
         if(info.msg.dst_id == ta->id){
             *flag = info.msg.flag;
             *src_id = info.msg.src_id;
@@ -134,12 +239,12 @@ tank_status_t tank_app_recv(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t 
     return TANK_SUCCESS;
 }
 
-tank_status_t tank_app_recv_wait(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag)
+tank_status_t tank_app_recv_msg_wait(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag)
 {
 
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     tank_msgq_recv_wait(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE);
-    if(info.type == SEND_MSG){
+    if(info.type == APP_SEND_MSG){
         if(info.msg.dst_id == ta->id){
             *flag = info.msg.flag;
             *src_id = info.msg.src_id;
@@ -174,7 +279,7 @@ static tank_status_t app_allocate_msgq(ta_info_t *ta)
     app_request_info_t app_info;
     memset(&app_info, 0, TANK_MSGQ_NORMAL_SIZE);
 
-    app_info.type = PUSH_MSGQ_ADDR;
+    app_info.type = APP_PUSH_MSGQ_ADDR;
     app_info.msgq.id = ta->id;
     app_info.msgq.recv_shift = (uint32_t)ta->receiver - g_shm_base;
     app_info.msgq.send_shift = (uint32_t)ta->sender - g_shm_base;
@@ -216,3 +321,7 @@ static tank_status_t app_allocate_heap(ta_info_t *ta)
     log_info("addr_base:%p, shift:%d\n", (void*)g_shm_base, app_get->shift);
     return TANK_SUCCESS;
 }
+
+
+
+// static tank_status_t slice_package(uint16_t size, )

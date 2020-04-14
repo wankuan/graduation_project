@@ -12,12 +12,16 @@ tank_status_t do_something(void *arg)
     return TANK_SUCCESS;
 }
 
-
+tank_status_t cb_invlid_id(void *arg)
+{
+    printf("dst id invlid\n");
+    return TANK_SUCCESS;
+}
 tcp_fsm_transform_t transform_table[] = {
     {LISTEN, SYN_RCVD, TCP_SYN, TCP_SYN|TCP_ACK, do_something},
     {SYN_RCVD, ESTABLISHED, TCP_ACK, TCP_NON, do_something},
     {SYN_SENT, ESTABLISHED, TCP_SYN|TCP_ACK, TCP_ACK, do_something},
-    {SYN_SENT, SYN_SENT, TCP_ID_INVALID, TCP_NON, do_something},
+    {SYN_SENT, SYN_SENT, TCP_ID_INVALID, TCP_NON, cb_invlid_id},
     {ESTABLISHED, LAST_ACK, TCP_FIN, TCP_ACK|TCP_FIN, do_something},
     {LAST_ACK, CLOSED, TCP_ACK, TCP_NON, do_something},
     {FIN_WAIT_1, CLOSED, TCP_ACK|TCP_FIN, TCP_ACK, do_something},
@@ -52,10 +56,10 @@ tank_status_t tank_fsm_recv(ta_info_t *ta)
     fsm_cnt ++;
     log_info("fsm running cnt:%d\n",fsm_cnt);
 
-    tank_app_recv_wait(ta, &src_id, &recv_flag);
+    tank_app_recv_msg_wait(ta, &src_id, &recv_flag);
     if(check_ta_id_exist(ta, src_id) == TANK_FAIL){
         log_error("ID:%d invalid, check it!\n", src_id);
-        tank_app_send(ta, src_id, TCP_ID_INVALID);
+        tank_app_send_msg(ta, src_id, TCP_ID_INVALID);
         return TANK_FAIL;
     }
     find_tcp_state(ta, src_id, &cur_state);
@@ -66,7 +70,7 @@ tank_status_t tank_fsm_recv(ta_info_t *ta)
     fsm_action(NULL);
     write_tcp_state(ta, src_id, next_state);
     if(send_flag != TCP_NON){
-        tank_app_send(ta, src_id, send_flag);
+        tank_app_send_msg(ta, src_id, send_flag);
     }else{
         log_info("unnecessary to send\n");
     }

@@ -8,6 +8,7 @@
 
 typedef uint16_t port_t;
 typedef uint32_t addr_t;
+typedef uint32_t addr_shift_t;
 typedef uint16_t ta_id_t;
 typedef uint16_t ta_msg_len_t;
 

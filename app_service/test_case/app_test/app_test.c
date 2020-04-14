@@ -2,6 +2,7 @@
 #include "tank_app.h"
 #include "pthread.h"
 #include "tcp_fsm.h"
+#include "tank_ID.h"
 
 ta_info_t app_demo;
 
@@ -32,6 +33,8 @@ int count = 0;
 int main(int argc, char *argv[])
 {
     pthread_t my_pid_t;
+    uint32_t value = 2048;
+    printf("value %x, mask %x slice %x\n", value, PACKAGE_MASK, PACKAGE_SLICE(value));
     if(argc == 4){
         long src_id = atol(argv[2]);
         long dst_id = atol(argv[3]);
@@ -44,22 +47,24 @@ int main(int argc, char *argv[])
             log_info("sender\n");
             tank_app_creat(&app_demo, src_id, 0, 0);
                 // for(int i=0;i<4;i++){
-                //     tank_app_send(&app_demo, 1, i);
+                //     tank_app_send_msg(&app_demo, 1, i);
                 // }
                 // sleep(1);
-            app_demo.index_lut[0].id = dst_id;
-            app_demo.index_lut[0].index = 0;
-            app_demo.cur_index += 1;
-            write_tcp_state(&app_demo, dst_id, SYN_SENT);
-            log_info("start TCP shake hands\n");
-            pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
-            tank_app_send(&app_demo, dst_id, TCP_SYN);
-            sleep(2);
-            log_info("start TCP closed\n");
-            write_tcp_state(&app_demo, dst_id, FIN_WAIT_1);
-            tank_app_send(&app_demo, dst_id, TCP_FIN);
+            // app_demo.index_lut[0].id = dst_id;
+            // app_demo.index_lut[0].index = 0;
+            // app_demo.cur_index += 1;
+            // write_tcp_state(&app_demo, dst_id, SYN_SENT);
+            // log_info("start TCP shake hands\n");
+            // pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
+            // tank_app_send_msg(&app_demo, dst_id, TCP_SYN);
+            // sleep(2);
+            char buf_test[] = "hello, my guy!";
+            tank_app_send_package_request(&app_demo, dst_id, buf_test, 30);
+            // log_info("start TCP closed\n");
+            // write_tcp_state(&app_demo, dst_id, FIN_WAIT_1);
+            // tank_app_send_msg(&app_demo, dst_id, TCP_FIN);
 
-            pthread_join(my_pid_t,NULL);
+            // pthread_join(my_pid_t,NULL);
         }else if(!strncmp(argv[1], "recv", 1024)){
             tank_log_init(&mylog, "app_reciver",2048, LEVEL_DEBUG,
                     LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
@@ -74,7 +79,7 @@ int main(int argc, char *argv[])
             }
             // tank_id_t src_id = 0;
             // tcp_state_t state = 0;
-            // tank_app_recv_wait(&app_demo, &src_id, &state);
+            // tank_app_recv_msg_wait(&app_demo, &src_id, &state);
             // app_demo.index_lut[0].id = 1;
             // app_demo.index_lut[0].index = 0;
             // write_tcp_state(&app_demo, dst_id, LISTEN);
