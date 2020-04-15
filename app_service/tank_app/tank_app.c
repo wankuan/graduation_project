@@ -5,7 +5,7 @@
 #include "tank_request.h"
 #include "tank_ID.h"
 #include "tcp_fsm.h"
-
+#include "tank_delay.h"
 #define APP_HEAP_SIZE 1024
 static tank_status_t app_allocate_heap(ta_info_t *ta);
 static tank_status_t app_allocate_msgq(ta_info_t *ta);
@@ -37,7 +37,7 @@ void *send_package_thread(ta_info_t *ta)
 {
     static uint32_t send_cnt = 0;
     while(1){
-        printf("send_package_cur_index:%d\n", ta->send_package_cur_index);
+        // printf("send_package_cur_index:%d\n", ta->send_package_cur_index);
         for(int i=0;i<ta->send_package_cur_index;i++){
             send_package_state_t state = ta->send_package_status[i].state;
             if(state == SEND_WAIT_REQUEST){
@@ -48,9 +48,9 @@ void *send_package_thread(ta_info_t *ta)
 
             }
         }
-        send_cnt += 1;
-        log_info("send_cnt running cnt:%d\n", send_cnt);
-        sleep(1);
+        // send_cnt += 1;
+        // log_info("send_cnt running cnt:%d\n", send_cnt);
+        sleep_ms(20);
     }
 }
 
@@ -97,10 +97,30 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
 
             }
         }
+    }else if(info.type == APP_GET_PACKAGE_PUSH){
+        tank_msgq_send(ta->recv_package, &info.get_package_push, sizeof(app_get_package_push_t));
+        log_info("[%s]APP_GET_PACKAGE_PUSH has write into msgq, recv it\n", ta->name);
     }else{
         log_info("[%s]recv type is error\n", ta->name);
         return TANK_FAIL;
     }
+    return TANK_SUCCESS;
+}
+
+tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, uint16_t *size, uint16_t oversize)
+{
+    app_get_package_push_t info;
+    memset(&info, 0, sizeof(app_get_package_push_t));
+    tank_msgq_recv_wait(ta->recv_package, &info, sizeof(app_get_package_push_t));
+    *size = info.size;
+    *src_id = info.src_id;
+    if(*size > oversize){
+        memcpy(packgae, (void*)(info.addr_shift+g_shm_base), oversize);
+    }else{
+        memcpy(packgae, (void*)(info.addr_shift+g_shm_base), *size);
+    }
+    log_info("shift_addr:0x%x\n", info.addr_shift);
+    get_package_finished(ta, info.package_id);
     return TANK_SUCCESS;
 }
 
@@ -246,7 +266,23 @@ tank_status_t send_package_finished(ta_info_t *ta, uint16_t index)
     ta->send_package_status[index].state = SEND_IDLE;
     return TANK_SUCCESS;
 }
-
+tank_status_t get_package_finished(ta_info_t *ta, uint32_t package_id)
+{
+    tank_status_t send_status = 0;
+    memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+    info.type = APP_GET_PACKAGE_FINISHED;
+    info.get_package_finished.package_id = package_id;
+    send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
+    if(send_status == TANK_FAIL){
+        log_error("[%s]get_package_finished, package_id:%d\n",
+                ta->name, info.send_package_finshed.package_id
+                );
+    }
+    log_info("[%s]get_package_finished, package_id:%d\n",
+            ta->name, info.send_package_finshed.package_id
+            );
+    return TANK_SUCCESS;
+}
 
 tank_status_t tank_app_recv_package_wait(ta_info_t *ta, tank_id_t *src_id, void *package, uint32_t *size, uint32_t max_size)
 {
@@ -376,12 +412,17 @@ static tank_status_t app_allocate_msgq(ta_info_t *ta)
 
     ta->receiver = (tank_msgq_t*)tank_mm_malloc(&ta->mm_handler, mm_size);
     tank_msgq_creat(ta->receiver, TANK_MSGQ_NORMAL_SIZE, TANK_MSGQ_NORMAL_LEN);
-    log_info("[%s] recv msgq addr:%p\n", ta->name, ta->receiver);
+    log_info("[%s]recv msgq addr:%p\n", ta->name, ta->receiver);
+
+    mm_size = sizeof(tank_msgq_t) + 10*sizeof(app_get_package_push_t);
+    ta->recv_package = (tank_msgq_t*)tank_mm_malloc(&ta->mm_handler, mm_size);
+    tank_msgq_creat(ta->recv_package, sizeof(app_get_package_push_t), 10);
+    log_info("[%s]recv_package msgq addr:%p\n", ta->name, ta->recv_package);
 
     // ta->sender = (tank_msgq_t*)tank_mm_malloc(&ta->mm_handler, mm_size);
     // tank_msgq_creat(ta->sender, TANK_MSGQ_NORMAL_SIZE, TANK_MSGQ_NORMAL_LEN);
     ta->sender = g_service_msgq;
-    log_info("[%s] send msgq addr:%p\n", ta->name, ta->sender);
+    log_info("[%s]send msgq addr:%p\n", ta->name, ta->sender);
 
     app_request_info_t app_info;
     memset(&app_info, 0, TANK_MSGQ_NORMAL_SIZE);

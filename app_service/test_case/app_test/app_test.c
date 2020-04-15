@@ -3,7 +3,7 @@
 #include "pthread.h"
 #include "tcp_fsm.h"
 #include "tank_ID.h"
-
+#include "tank_map.h"
 ta_info_t app_demo;
 
 #include "tank_log_api.h"
@@ -46,26 +46,23 @@ int main(int argc, char *argv[])
             log_info("========logger start===========\n");
             log_info("sender\n");
             tank_app_creat(&app_demo, src_id, 0, 0);
-                // for(int i=0;i<4;i++){
-                //     tank_app_send_msg(&app_demo, 1, i);
-                // }
-                // sleep(1);
-            // app_demo.index_lut[0].id = dst_id;
-            // app_demo.index_lut[0].index = 0;
-            // app_demo.id_cur_index += 1;
-            // write_tcp_state(&app_demo, dst_id, SYN_SENT);
-            // log_info("start TCP shake hands\n");
+
             pthread_create(&my_pid_t,NULL, (void*)&send_package_thread,&app_demo);
             pthread_create(&my_pid_t,NULL, (void*)&recv_thread,&app_demo);
             sleep(1);
-            // tank_app_send_msg(&app_demo, dst_id, TCP_SYN);
-            // sleep(2);
+
             char buf_test[] = "hello, my guy!";
             ta_send_package(&app_demo, dst_id, buf_test, 30, 0);
-            // log_info("start TCP closed\n");
-            // write_tcp_state(&app_demo, dst_id, FIN_WAIT_1);
-            // tank_app_send_msg(&app_demo, dst_id, TCP_FIN);
 
+            while(1){
+                tank_id_t src_id;
+                uint16_t size;
+                char buf[1024];
+                ta_recv_package(&app_demo, &src_id, buf, &size, 100);
+                log_info("g_shm_base:0x%x\n", g_shm_base);
+                log_info("shift:0x%x\n", g_shm_base);
+                log_info("get a messgae from src_id:%d, size:%d, info:%s\n", src_id, size, buf);
+            }
             pthread_join(my_pid_t,NULL);
         }else if(!strncmp(argv[1], "recv", 1024)){
             tank_log_init(&mylog, "app_reciver",2048, LEVEL_DEBUG,
@@ -79,15 +76,27 @@ int main(int argc, char *argv[])
                     tank_app_listen(&app_demo, i);
                 }
             }
-            // tank_id_t src_id = 0;
-            // tcp_state_t state = 0;
-            // tank_app_recv_msg_wait(&app_demo, &src_id, &state);
-            // app_demo.index_lut[0].id = 1;
-            // app_demo.index_lut[0].index = 0;
-            // write_tcp_state(&app_demo, dst_id, LISTEN);
-            // log_info("start TCP shake hands\n");
 
+            pthread_create(&my_pid_t,NULL, (void*)&send_package_thread,&app_demo);
             pthread_create(&my_pid_t,NULL, (void*)&recv_thread,&app_demo);
+
+
+
+            while(1){
+                static uint16_t num = 0;
+                tank_id_t src_id;
+                uint16_t size;
+                char buf[1024];
+                memset(buf, 0, 1024);
+                ta_recv_package(&app_demo, &src_id, buf, &size, 100);
+                log_info("get a messgae from src_id:%d, size:%d, info:%s\n", src_id, size, buf);
+                uint16_t cur_index = strlen(buf);
+                buf[cur_index] = num + '0';
+                buf[cur_index+1] = '\0';
+                ta_send_package(&app_demo, src_id, buf, cur_index+2, 0);
+                num += 1;
+                sleep(1);
+            }
             pthread_join(my_pid_t,NULL);
             goto exit;
         }else{

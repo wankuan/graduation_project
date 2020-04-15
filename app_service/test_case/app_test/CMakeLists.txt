@@ -21,6 +21,7 @@ SET(SRCS
     ./../../../tank_map.c
     ./../../../tank_components/tank_log/tank_log_api.c
     ./../../../tank_components/tank_log/tank_log.c
+    ./../../../tank_components/delay/tank_delay.c
 )
 
 include_directories(
@@ -33,6 +34,7 @@ include_directories(
     ./../../../
     ./../../
     ./../../../tank_components/tank_log/
+    ./../../../tank_components/delay/
 )
 
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})

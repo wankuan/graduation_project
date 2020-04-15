@@ -112,7 +112,7 @@ typedef struct{
     tank_mm_t           mm_handler;
     tank_msgq_t         *sender;
     tank_msgq_t         *receiver;
-    tank_msgq_t         *packet;
+    tank_msgq_t         *recv_package;
 }ta_info_t;
 
 

@@ -214,11 +214,31 @@ void *main_thread(void *arg)
             void *buf = (void*)(package_info->addr_shift + g_shm_base);
             log_info("recv msg:%s\n", buf);
             log_info("======APP_SEND_PACKAGE_FINISHED exit======\n");
-            // g_app_package_seq += 1;
-        }else if(info.type == APP_GET_PACKAGE_PUSH){
 
+            log_info("======APP_GET_PACKAGE_PUSH start======\n");
+
+            memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+            info.type = APP_GET_PACKAGE_PUSH;
+            info.get_package_push.src_id = package_info->src_id;
+            info.get_package_push.dst_id = package_info->dst_id;
+            info.get_package_push.package_id = package_info->package_id;
+            info.get_package_push.addr_shift = package_info->addr_shift;
+            info.get_package_push.size = package_info->size;
+            tank_id_t index =  find_id_index(info.get_package_push.dst_id);
+            tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
+            log_info("======APP_GET_PACKAGE_PUSH exit======\n");
+        }else if(info.type == APP_GET_PACKAGE_FINISHED){
+            log_info("======APP_GET_PACKAGE_FINISHED start======\n");
+            uint32_t package_id = info.get_package_finished.package_id;
+            app_package_t  *package_info = find_package_info(package_id);
+            if(package_info == NULL){
+                log_error("can not find package_id:%d\n", package_id);
+                continue;
+            }
+            tank_mm_free(&g_in_swap_mm, (void*)(package_info->addr_shift + g_shm_base));
+            log_info("======APP_GET_PACKAGE_FINISHED exit======\n");
         }else{
-
+            log_error("error type, %d\n", info.type);
         }
     }
     return NULL;
