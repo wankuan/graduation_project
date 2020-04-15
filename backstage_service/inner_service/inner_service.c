@@ -167,10 +167,10 @@ void *main_thread(void *arg)
                 log_error("can not find id:%d\n", info.send_package_request.dst_id);
                 continue;
             }
-
+            static uint32_t g_package_id = 0;
             app_package_info[g_app_package_seq].src_id = info.send_package_request.src_id;
             app_package_info[g_app_package_seq].dst_id = info.send_package_request.dst_id;
-            app_package_info[g_app_package_seq].package_id = info.send_package_request.package_id;
+            app_package_info[g_app_package_seq].package_id = g_package_id;
             app_package_info[g_app_package_seq].size = info.send_package_request.size;
             log_info("start malloc package\n");
             void *addr = tank_mm_alloc(&g_in_swap_mm, info.send_package_request.size);
@@ -196,28 +196,23 @@ void *main_thread(void *arg)
             log_info("======APP_GET_PACKAGE_ALLOCATE exit======\n");
 
             g_app_package_seq += 1;
+            g_package_id += 1;
         }else if(info.type == APP_SEND_PACKAGE_FINISHED){
             log_info("======APP_SEND_PACKAGE_FINISHED start======\n");
-            // int index = find_id_index(info.send_package_request.dst_id);
-            // if(index < 0){
-            //     log_error("can not find id:%d\n", info.send_package_request.dst_id);
-            //     continue;
-            // }
+            uint32_t package_id = info.send_package_finshed.package_id;
+            app_package_t  *package_info = find_package_info(package_id);
+            if(package_info == NULL){
+                log_error("can not find package_id:%d\n", package_id);
+                continue;
+            }
+            log_info("ALLOCATE INFO:src_id:%d, dst_id:%d, package_id:%d, size:%d, addr_shift:%d\n",
+                    package_info->src_id, package_info->dst_id,
+                    package_info->package_id, package_info->size,
+                    package_info->addr_shift
+                    );
 
-            // app_package_info[g_app_package_seq].src_id = info.send_package_request.src_id;
-            // app_package_info[g_app_package_seq].dst_id = info.send_package_request.dst_id;
-            // app_package_info[g_app_package_seq].package_id = info.send_package_request.package_id;
-            // app_package_info[g_app_package_seq].size = info.send_package_request.size;
-            // log_info("start malloc package\n");
-            // void *addr = tank_mm_alloc(&g_in_swap_mm, info.send_package_request.size);
-            // uint32_t add_shift = (uint32_t)addr - g_shm_base;
-            // app_package_info[g_app_package_seq].addr_shift = add_shift;
-
-            // log_info("ALLOCATE INFO:src_id:%d, dst_id:%d, package_id:%d, size:%d, addr_shift:%d\n",
-            //         app_package_info[g_app_package_seq].src_id, app_package_info[g_app_package_seq].dst_id,
-            //         app_package_info[g_app_package_seq].package_id, app_package_info[g_app_package_seq].size,
-            //         app_package_info[g_app_package_seq].addr_shift
-            //         );
+            void *buf = (void*)(package_info->addr_shift + g_shm_base);
+            log_info("recv msg:%s\n", buf);
             log_info("======APP_SEND_PACKAGE_FINISHED exit======\n");
             // g_app_package_seq += 1;
         }else if(info.type == APP_GET_PACKAGE_PUSH){
@@ -235,7 +230,7 @@ void *main_thread(void *arg)
 
 int main(int argc, char *argv[])
 {
-    tank_log_init(&mylog, "inner",2048, LEVEL_INFO,
+    tank_log_init(&mylog, "inner",2048, LEVEL_DEBUG,
                 LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
                 PORT_FILE|PORT_SHELL
                 );

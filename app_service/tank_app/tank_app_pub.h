@@ -14,6 +14,7 @@ typedef uint16_t ta_msg_len_t;
 
 #define TA_HOST_MAX 10
 #define TA_NAME_SIZE_MAX 32
+#define TA_PACKAGE_MAX 20
 
 typedef enum {
     CLOSED      = 0,
@@ -81,6 +82,22 @@ typedef struct{
     tank_id_t index;
 }ta_index_lut_t;
 
+typedef enum{
+    SEND_WAIT_REQUEST,
+    SEND_WAIT_ALLOCATE,
+    SEND_FINISHE,
+    SEND_IDLE
+}send_package_state_t;
+
+typedef struct{
+    tank_id_t src_id;
+    tank_id_t dst_id;
+    void *package;
+    uint32_t size;
+    uint32_t package_id;
+    send_package_state_t state;
+}app_package_info_t;
+
 typedef struct{
     ta_id_t             id;
     ta_addr_t           addr;
@@ -88,8 +105,10 @@ typedef struct{
     ta_type_t           type;
     char                name[TA_NAME_SIZE_MAX];
     ta_index_lut_t      index_lut[TA_HOST_MAX];
-    tank_id_t           cur_index;
+    tank_id_t           id_cur_index;
     ta_connect_status_t connect_status[TA_HOST_MAX];
+    uint16_t            send_package_cur_index;
+    app_package_info_t  send_package_status[TA_PACKAGE_MAX];
     tank_mm_t           mm_handler;
     tank_msgq_t         *sender;
     tank_msgq_t         *receiver;

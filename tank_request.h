@@ -33,7 +33,6 @@ typedef struct{
 typedef struct{
     tank_id_t src_id;
     tank_id_t dst_id;
-    tank_id_t package_id;
     tank_package_size_t size;
 }app_send_package_request_t;
 

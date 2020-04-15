@@ -52,19 +52,21 @@ int main(int argc, char *argv[])
                 // sleep(1);
             // app_demo.index_lut[0].id = dst_id;
             // app_demo.index_lut[0].index = 0;
-            // app_demo.cur_index += 1;
+            // app_demo.id_cur_index += 1;
             // write_tcp_state(&app_demo, dst_id, SYN_SENT);
             // log_info("start TCP shake hands\n");
-            // pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
+            pthread_create(&my_pid_t,NULL, (void*)&send_package_thread,&app_demo);
+            pthread_create(&my_pid_t,NULL, (void*)&recv_thread,&app_demo);
+            sleep(1);
             // tank_app_send_msg(&app_demo, dst_id, TCP_SYN);
             // sleep(2);
             char buf_test[] = "hello, my guy!";
-            tank_app_send_package_request(&app_demo, dst_id, buf_test, 30);
+            ta_send_package(&app_demo, dst_id, buf_test, 30, 0);
             // log_info("start TCP closed\n");
             // write_tcp_state(&app_demo, dst_id, FIN_WAIT_1);
             // tank_app_send_msg(&app_demo, dst_id, TCP_FIN);
 
-            // pthread_join(my_pid_t,NULL);
+            pthread_join(my_pid_t,NULL);
         }else if(!strncmp(argv[1], "recv", 1024)){
             tank_log_init(&mylog, "app_reciver",2048, LEVEL_DEBUG,
                     LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
@@ -83,8 +85,9 @@ int main(int argc, char *argv[])
             // app_demo.index_lut[0].id = 1;
             // app_demo.index_lut[0].index = 0;
             // write_tcp_state(&app_demo, dst_id, LISTEN);
-            log_info("start TCP shake hands\n");
-            pthread_create(&my_pid_t,NULL,&fsm_thread,NULL);
+            // log_info("start TCP shake hands\n");
+
+            pthread_create(&my_pid_t,NULL, (void*)&recv_thread,&app_demo);
             pthread_join(my_pid_t,NULL);
             goto exit;
         }else{

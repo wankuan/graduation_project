@@ -4,8 +4,6 @@
 #define FILE_NAME "tcp_fsm"
 
 
-static  tank_status_t find_fsm_table(tcp_state_t cur_state, tcp_state_t* next_state, tcp_header_flag_t recv_flag, tcp_header_flag_t *send_flag, tank_status_t (**cb)(void *));
-
 tank_status_t do_something(void *arg)
 {
     printf("fsm cb do something\n");
@@ -27,7 +25,7 @@ tcp_fsm_transform_t transform_table[] = {
     {FIN_WAIT_1, CLOSED, TCP_ACK|TCP_FIN, TCP_ACK, do_something},
 };
 
-static tank_status_t find_fsm_table(tcp_state_t cur_state, tcp_state_t* next_state, tcp_header_flag_t recv_flag, tcp_header_flag_t *send_flag, tank_status_t (**cb)(void *))
+tank_status_t find_fsm_table(tcp_state_t cur_state, tcp_state_t* next_state, tcp_header_flag_t recv_flag, tcp_header_flag_t *send_flag, tank_status_t (**cb)(void *))
 {
     uint16_t size = sizeof(transform_table)/sizeof(transform_table[0]);
     for(uint16_t i=0;i<size;++i){
