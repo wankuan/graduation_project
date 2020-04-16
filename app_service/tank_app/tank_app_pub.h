@@ -98,7 +98,14 @@ typedef struct{
     send_package_state_t state;
 }app_package_info_t;
 
+
+
 typedef struct{
+    pthread_t           pid;
+    pthread_mutex_t     thread_mutex;
+    my_sem_t            thread_sem;
+    void*               (*recv_thread)(void*);
+    void*               (*send_thread)(void*);
     ta_id_t             id;
     ta_addr_t           addr;
     ta_protocol_t       protocol;

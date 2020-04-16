@@ -5,8 +5,8 @@
 #include "tank_request.h"
 
 
-void *recv_thread(ta_info_t *ta);
-void *send_package_thread(ta_info_t *ta);
+void *recv_fun(void *arg);
+void *send_fun(void *arg);
 tank_status_t tank_app_recv_all(ta_info_t *ta);
 
 tank_status_t check_ta_id_exist(ta_info_t *ta, tank_id_t id);
@@ -16,8 +16,11 @@ tank_status_t find_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t *state);
 tank_status_t write_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t state);
 
 
+
 tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type);
-tank_status_t tank_app_send_msg(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t flag);
+tank_status_t tank_app_destory(ta_info_t *ta);
+
+tank_status_t tank_app_tcp_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t flag);
 
 
 tank_status_t tank_app_recv_msg(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag);

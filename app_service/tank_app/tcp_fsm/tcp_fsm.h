@@ -19,6 +19,5 @@ typedef struct{
 tank_status_t find_fsm_table(tcp_state_t cur_state, tcp_state_t* next_state, tcp_header_flag_t recv_flag, tcp_header_flag_t *send_flag, tank_status_t (**cb)(void *));
 
 
-tank_status_t tank_fsm_recv(ta_info_t *ta);
 
 #endif

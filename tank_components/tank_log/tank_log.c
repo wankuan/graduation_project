@@ -79,6 +79,12 @@ log_status_t tank_log_write(tank_log_t *log_handler, const char *app, const char
         snprintf(&log_buffer[write_len], LOG_INFO_TIME_WIDTH, "[%s]",time_buffer);
         write_len = strlen(log_buffer);
     }
+    if(log_info&LOG_INFO_LEVEL){
+        char level_str_buffer[LOG_INFO_LEVEL_WIDTH];
+        get_log_level_str(level, level_str_buffer);
+        snprintf(&log_buffer[write_len], LOG_INFO_LEVEL_WIDTH, "[%s]",level_str_buffer);
+        write_len = strlen(log_buffer);
+    }
     if(log_info&LOG_INFO_OUTAPP){
         snprintf(&log_buffer[write_len], LOG_INFO_APP_WIDTH, "[%s]",app);
         write_len = strlen(log_buffer);
@@ -91,12 +97,7 @@ log_status_t tank_log_write(tank_log_t *log_handler, const char *app, const char
         snprintf(&log_buffer[write_len], LOG_INFO_FUN_WIDTH, "[%s]",fun);
         write_len = strlen(log_buffer);
     }
-    if(log_info&LOG_INFO_LEVEL){
-        char level_str_buffer[LOG_INFO_LEVEL_WIDTH];
-        get_log_level_str(level, level_str_buffer);
-        snprintf(&log_buffer[write_len], LOG_INFO_LEVEL_WIDTH, "[%s]",level_str_buffer);
-        write_len = strlen(log_buffer);
-    }
+
 
     snprintf(&log_buffer[write_len], 256, ":");
     write_len = strlen(log_buffer);
