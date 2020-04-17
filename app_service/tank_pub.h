@@ -19,8 +19,8 @@ typedef uint16_t tank_queue_id_t;
 typedef uint16_t tank_id_t;
 
 typedef enum{
-    TANK_SUCCESS = 0,
-    TANK_FAIL = 1
+    TANK_SUCCESS = 1,
+    TANK_FAIL = 0
 }tank_status_t;
 
 

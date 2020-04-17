@@ -251,6 +251,9 @@ tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package, ui
     log_info("[%s]ta_send_package into buffer, src_id:%d, dst_id:%d, size:%d\n",
         ta->name, ta->id, dst_id, size);
     ta->send_package_cur_index += 1;
+    if(ta->send_package_cur_index == TA_PACKAGE_MAX){
+        ta->send_package_cur_index = 0;
+    }
     return TANK_SUCCESS;
 }
 tank_status_t send_package_request(ta_info_t *ta, uint16_t index)

@@ -205,14 +205,9 @@ void *main_thread(void *arg)
                 log_error("can not find package_id:%d\n", package_id);
                 continue;
             }
-            log_info("ALLOCATE INFO:src_id:%d, dst_id:%d, package_id:%d, size:%d, addr_shift:%d\n",
-                    package_info->src_id, package_info->dst_id,
-                    package_info->package_id, package_info->size,
-                    package_info->addr_shift
-                    );
 
-            void *buf = (void*)(package_info->addr_shift + g_shm_base);
-            log_info("recv msg:%s\n", buf);
+            uint32_t *num = (void*)(package_info->addr_shift + g_shm_base);
+            log_info("recv data num:%d\n", *num);
             log_info("======APP_SEND_PACKAGE_FINISHED exit======\n");
 
             log_info("======APP_GET_PACKAGE_PUSH start======\n");
