@@ -13,6 +13,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fdata-sections -ffunction-sections -g
 SET(SRCS
     ./app_test.c
     ./../../my_osal/my_sem.c
+    ./../../my_list/my_list.c
     ./../../tank_msgq/tank_msgq.c
     ./../../tank_memory/heap_4.c
     ./../../tank_memory/tank_mm.c
@@ -27,6 +28,7 @@ SET(SRCS
 include_directories(
     ./
     ./../../my_osal
+    ./../../my_list/
     ./../../tank_msgq
     ./../../tank_memory
     ./../../tank_app

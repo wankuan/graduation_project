@@ -6,6 +6,7 @@
 #include "tank_map.h"
 #include <pthread.h>
 #include "tank_log.h"
+#include "tank_delay.h"
 
 ta_info_t app_demo;
 ta_info_t app_demo2;
@@ -35,12 +36,12 @@ void *recv(void *arg)
         uint16_t size;
         uint32_t num = 0;
         ta_recv_package(ta, &src_id, &num, &size, 100);
-        log_info("get a messgae from src_id:%d, size:%d, info:%d\n", src_id, size, num);
+        log_info("=======get a messgae from src_id:%d, size:%d, info:%d=======\n", src_id, size, num);
         // uint16_t cur_index = strlen(buf);
         // buf[cur_index] = num + '0';
         // buf[cur_index+1] = '\0';
         // ta_send_package(ta, src_id, buf, cur_index+2, 0);
-        sleep(1);
+        // sleep(1);
     }
 }
 
@@ -72,8 +73,8 @@ int main(int argc, char *argv[])
             while(1){
                 static uint32_t num = 0;
                 ta_send_package(&app_demo, dst_id, &num, sizeof(num), 0);
-                log_info("send a msg num:%d\n", num);
-                sleep(1);
+                log_info("============send a msg num:%d============\n", num);
+                sleep_ms(100);
                 num += 1;
             }
             tank_app_destory(&app_demo);

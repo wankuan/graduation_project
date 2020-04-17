@@ -34,20 +34,20 @@ int main(int argc, char *argv[])
 
     tank_mm_register(&my_mm, (uint32_t)buf, map_size, "huang");
 
-    void * p = tank_mm_alloc(&my_mm, 256);
+    void * p = tank_mm_calloc(&my_mm, 256);
     if(p == NULL){
         printf("allocate error\n");
     }
     memcpy(p, "test mm", strlen("test mm"));
     // msync(&buf, map_size, MS_ASYNC);
     tank_mm_free(&my_mm, p);
-    void *p2 = tank_mm_alloc(&my_mm, 16);
-    void *p3 = tank_mm_alloc(&my_mm, 16);
+    void *p2 = tank_mm_calloc(&my_mm, 16);
+    void *p3 = tank_mm_calloc(&my_mm, 16);
     tank_mm_free(&my_mm, p2);
     tank_mm_free(&my_mm, p3);
-    p = tank_mm_alloc(&my_mm, 33);
-    p2 = tank_mm_alloc(&my_mm, 256);
-    p3 = tank_mm_alloc(&my_mm, 192);
+    p = tank_mm_calloc(&my_mm, 33);
+    p2 = tank_mm_calloc(&my_mm, 256);
+    p3 = tank_mm_calloc(&my_mm, 192);
     // snprintf(buf, 1024, "This is a share memory!");
     // printf("message:%s\n", buf);
 

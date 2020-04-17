@@ -25,7 +25,7 @@ void *tank_mm_malloc(tank_mm_t *handler, uint32_t size)
 }
 
 
-void *tank_mm_alloc(tank_mm_t *handler, uint32_t size)
+void *tank_mm_calloc(tank_mm_t *handler, uint32_t size)
 {
     void *p = NULL;
     my_sem_wait(&handler->sem);

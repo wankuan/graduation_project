@@ -4,7 +4,7 @@
 #include "tank_pub.h"
 #include "tank_msgq.h"
 #include "tank_mm.h"
-
+#include "my_list.h"
 
 typedef uint16_t port_t;
 typedef uint32_t addr_t;
@@ -115,7 +115,7 @@ typedef struct{
     tank_id_t           id_cur_index;
     ta_connect_status_t connect_status[TA_HOST_MAX];
     uint16_t            send_package_cur_index;
-    app_package_info_t  send_package_status[TA_PACKAGE_MAX];
+    list_head_t         send_package_status;
     tank_mm_t           mm_handler;
     tank_msgq_t         *sender;
     tank_msgq_t         *receiver;

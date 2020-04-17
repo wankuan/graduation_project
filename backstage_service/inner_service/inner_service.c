@@ -18,7 +18,7 @@ tank_msgq_t             *g_service_request_msgq;
 app_heap_get_t          *g_app_get;
 app_request_info_t               g_app_request;
 
-app_package_t app_package_info[100] = {0};
+app_package_t app_package_info[16*1024] = {0};
 uint16_t       g_app_package_seq = 0;
 
 
@@ -72,6 +72,9 @@ tank_status_t app_malloc_init(void)
     my_sem_creat(&g_app_get->sem, 0);
 
     g_service_request_msgq = (tank_msgq_t*)tank_mm_malloc(&g_in_swap_mm, sizeof(tank_msgq_t)+50*20);
+    if(g_service_request_msgq == NULL){
+        log_error("g_service_request_msgq allocate memory fail, heap full\n");
+    }
     log_info("msgq addr:%p\n", g_service_request_msgq);
 
     *(uint32_t*)MSGQ_MAP_ADDR = (uint32_t)g_service_request_msgq - g_shm_base;
@@ -121,7 +124,10 @@ void *main_thread(void *arg)
                 continue;
             }
             log_info("start malloc\n");
-            void *addr = tank_mm_alloc(&g_in_swap_mm, info.heap.size);
+            void *addr = tank_mm_calloc(&g_in_swap_mm, info.heap.size);
+            if(addr == NULL){
+                log_error("addr allocate memory fail, heap full\n");
+            }
             log_info("[%s]remain:%d\n", g_in_swap_mm.name, g_in_swap_mm.heap.xFreeBytesRemaining);
             uint32_t shift = (uint32_t)addr - g_shm_base;
 
@@ -173,7 +179,11 @@ void *main_thread(void *arg)
             app_package_info[g_app_package_seq].package_id = g_package_id;
             app_package_info[g_app_package_seq].size = info.send_package_request.size;
             log_info("start malloc package\n");
-            void *addr = tank_mm_alloc(&g_in_swap_mm, info.send_package_request.size);
+            void *addr = tank_mm_calloc(&g_in_swap_mm, info.send_package_request.size);
+            if(addr == NULL){
+                log_error("addr allocate memory fail, heap full\n");
+                continue;
+            }
             uint32_t add_shift = (uint32_t)addr - g_shm_base;
             app_package_info[g_app_package_seq].addr_shift = add_shift;
 
@@ -230,7 +240,7 @@ void *main_thread(void *arg)
                 log_error("can not find package_id:%d\n", package_id);
                 continue;
             }
-            tank_mm_free(&g_in_swap_mm, (void*)(package_info->addr_shift + g_shm_base));
+            // tank_mm_free(&g_in_swap_mm, (void*)(package_info->addr_shift + g_shm_base));
             log_info("======APP_GET_PACKAGE_FINISHED exit======\n");
         }else{
             log_error("error type, %d\n", info.type);

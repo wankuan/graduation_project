@@ -52,8 +52,10 @@ void *send_fun(void *arg)
     log_info("[%s] send_thread running!\n", ta->name);
     static uint32_t send_cnt = 0;
     while(1){
-        for(int i=0;i<ta->send_package_cur_index;i++){
-            send_package_state_t state = ta->send_package_status[i].state;
+        app_package_info_t package_info;
+        for(int i=0;i<list_get_len(&ta->send_package_status);i++){
+            list_get_node(&ta->send_package_status, i, &package_info);
+            send_package_state_t state = package_info.state;
             if(state == SEND_WAIT_REQUEST){
                 send_package_request(ta, i);
             }else if(state == SEND_FINISHE){
@@ -93,7 +95,7 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         }
         find_tcp_state(ta, src_id, &cur_state);
 
-        if(find_fsm_table(cur_state, &next_state, recv_flag, &send_flag, &fsm_action)){
+        if(find_fsm_table(cur_state, &next_state, recv_flag, &send_flag, &fsm_action) ==  TANK_FAIL){
             return TANK_FAIL;
         }
         fsm_action(NULL);
@@ -103,10 +105,13 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         }else{
             log_info("[%s][TCP]unnecessary to send\n", ta->name);
         }
+        log_info("[%s][TCP]shake hand, exit", ta->name);
     }else if(info.type == APP_GET_PACKAGE_ALLOCATE){
         log_info("[%s]sender: get package allocate info\n", ta->name);
-        for(int i=0;i<ta->send_package_cur_index;i++){
-            send_package_state_t state = ta->send_package_status[i].state;
+        app_package_info_t package_info;
+        for(int i=0;i<list_get_len(&ta->send_package_status);i++){
+            list_get_node(&ta->send_package_status, i, &package_info);
+            send_package_state_t state = package_info.state;
             if(state == SEND_WAIT_ALLOCATE){
                 get_package_allocate(ta, i, &info);
                 break;
@@ -228,7 +233,7 @@ tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol
     snprintf(ta->name, 32, "APP%d", ta->id);
     app_allocate_heap(ta);
     app_allocate_msgq(ta);
-
+    list_creat(&ta->send_package_status, &ta->mm_handler, sizeof(app_package_info_t), 20);
     pthread_create(&ta->pid, NULL, ta->recv_thread, ta);
     pthread_create(&ta->pid, NULL, ta->send_thread, ta);
     log_info("============ app init OK ===========\n");
@@ -238,39 +243,47 @@ tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol
 tank_status_t tank_app_destory(ta_info_t *ta)
 {
     pthread_join(ta->pid, NULL);
+    return TANK_FAIL;
 }
 
 tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package, uint32_t size, uint32_t tiemout)
 {
-    ta->send_package_status[ta->send_package_cur_index].src_id = ta->id;
-    ta->send_package_status[ta->send_package_cur_index].dst_id = dst_id;
-    ta->send_package_status[ta->send_package_cur_index].package = package;
-    ta->send_package_status[ta->send_package_cur_index].size = size;
-    ta->send_package_status[ta->send_package_cur_index].state = SEND_WAIT_REQUEST;
+    app_package_info_t info;
+
+    info.src_id = ta->id;
+    info.dst_id = dst_id;
+    info.package = package;
+    info.size = size;
+    info.state = SEND_WAIT_REQUEST;
+
+    if(list_add_node(&ta->send_package_status, &info) == TANK_FAIL){
+        log_error("[%s]ta_send_package into buffer error, list is full!\n");
+        return TANK_FAIL;
+    }
 
     log_info("[%s]ta_send_package into buffer, src_id:%d, dst_id:%d, size:%d\n",
         ta->name, ta->id, dst_id, size);
-    ta->send_package_cur_index += 1;
-    if(ta->send_package_cur_index == TA_PACKAGE_MAX){
-        ta->send_package_cur_index = 0;
-    }
+
     return TANK_SUCCESS;
 }
 tank_status_t send_package_request(ta_info_t *ta, uint16_t index)
 {
     app_request_info_t info;
+    app_package_info_t package_info;
     tank_status_t send_status = 0;
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+    list_get_node(&ta->send_package_status, index, &package_info);
     info.type = APP_SEND_PACKAGE_REQUEST;
-    info.send_package_request.src_id = ta->send_package_status[index].src_id;
-    info.send_package_request.dst_id = ta->send_package_status[index].dst_id;
-    info.send_package_request.size = ta->send_package_status[index].size;
+    info.send_package_request.src_id = package_info.src_id;
+    info.send_package_request.dst_id = package_info.dst_id;
+    info.send_package_request.size = package_info.size;
     send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
     if(send_status == TANK_FAIL){
         log_error("[%s][send_package_request]send error\n", ta->name);
         return TANK_FAIL;
     }
-    ta->send_package_status[index].state = SEND_WAIT_ALLOCATE;
+    package_info.state = SEND_WAIT_ALLOCATE;
+    list_rewrite_node(&ta->send_package_status, index, &package_info);
     log_info("[%s]send_package_request, src_id:%d, dst_id:%d, size:%d\n",
             ta->name, info.send_package_request.src_id, info.send_package_request.dst_id, info.send_package_request.size
             );
@@ -279,32 +292,40 @@ tank_status_t send_package_request(ta_info_t *ta, uint16_t index)
 tank_status_t get_package_allocate(ta_info_t *ta, uint16_t index, app_request_info_t *info)
 {
     addr_t addr = 0;
+    app_package_info_t package_info;
+    list_get_node(&ta->send_package_status, index, &package_info);
     if(info->send_package_allocate.dst_id == ta->id){
         addr = info->send_package_allocate.addr_shift + g_shm_base;
-        ta->send_package_status[index].package_id = info->send_package_allocate.package_id;
+        package_info.package_id = info->send_package_allocate.package_id;
     }else{
         log_info("[%s][get_package_allocate]recv id is error, get_package_allocate dst id %d\n", ta->name, info->send_package_allocate.dst_id);
         return TANK_FAIL;
     }
-    log_info("[%s]get_package_allocate, package_id:%d shift:%d\n", ta->name, ta->send_package_status[index].package_id, info->send_package_allocate.addr_shift);
-    memcpy((void*)addr, ta->send_package_status[index].package, ta->send_package_status[index].size);
-    log_info("[%s]write data into memory, package_id:%d shift:%d\n", ta->name, ta->send_package_status[index].package_id, info->send_package_allocate.addr_shift);
-    ta->send_package_status[index].state = SEND_FINISHE;
+    log_info("[%s]get_package_allocate, package_id:%d shift:%d\n", ta->name, package_info.package_id, info->send_package_allocate.addr_shift);
+    memcpy((void*)addr, package_info.package, package_info.size);
+    log_info("[%s]write data into memory, package_id:%d shift:%d\n", ta->name, package_info.package_id, info->send_package_allocate.addr_shift);
+    package_info.state = SEND_FINISHE;
+    list_rewrite_node(&ta->send_package_status, index, &package_info);
     return TANK_SUCCESS;
 }
 tank_status_t send_package_finished(ta_info_t *ta, uint16_t index)
 {
     app_request_info_t info;
     tank_status_t send_status = 0;
+    app_package_info_t package_info;
+    list_get_node(&ta->send_package_status, index, &package_info);
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     info.type = APP_SEND_PACKAGE_FINISHED;
-    info.send_package_finshed.package_id = ta->send_package_status[index].package_id;
+    info.send_package_finshed.package_id = package_info.package_id;
     send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
     if(send_status == TANK_FAIL){
         log_error("[%s][send_package_finished ACK]send error\n", ta->name);
         return TANK_FAIL;
     }
-    ta->send_package_status[index].state = SEND_IDLE;
+    package_info.state = SEND_IDLE;
+    list_delete_node(&ta->send_package_status, index);
+    // list_rewrite_node(&ta->send_package_status, index, &package_info);
+
     log_info("[%s]send_package_finished, ACK, package_id:%d\n",
             ta->name, info.send_package_finshed.package_id
             );
@@ -434,15 +455,20 @@ tank_status_t tank_app_recv_msg_wait(ta_info_t *ta, tank_id_t *src_id, tcp_heade
 
 static tank_status_t app_allocate_msgq(ta_info_t *ta)
 {
-    app_request_info_t info;
     uint16_t mm_size = sizeof(tank_msgq_t)+TANK_MSGQ_NORMAL_LEN*TANK_MSGQ_NORMAL_SIZE;
 
     ta->receiver = (tank_msgq_t*)tank_mm_malloc(&ta->mm_handler, mm_size);
+    if(ta->receiver == NULL){
+        log_error("ta->receiver allocate memory fail, heap full\n");
+    }
     tank_msgq_creat(ta->receiver, TANK_MSGQ_NORMAL_SIZE, TANK_MSGQ_NORMAL_LEN);
     log_info("[%s]receiver msgq addr:%p\n", ta->name, ta->receiver);
 
     mm_size = sizeof(tank_msgq_t) + 10*sizeof(app_get_package_push_t);
     ta->recv_package = (tank_msgq_t*)tank_mm_malloc(&ta->mm_handler, mm_size);
+    if(ta->recv_package == NULL){
+        log_error("ta->recv_package allocate memory fail, heap full\n");
+    }
     tank_msgq_creat(ta->recv_package, sizeof(app_get_package_push_t), 10);
     log_info("[%s]recv_package msgq addr:%p\n", ta->name, ta->recv_package);
 

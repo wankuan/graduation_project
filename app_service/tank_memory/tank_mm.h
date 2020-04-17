@@ -20,6 +20,6 @@ void *tank_mm_malloc(tank_mm_t *handler, uint32_t size);
 
 void tank_mm_free(tank_mm_t *handler, void *addr);
 
-void *tank_mm_alloc(tank_mm_t *handler, uint32_t size);
+void *tank_mm_calloc(tank_mm_t *handler, uint32_t size);
 
 #endif

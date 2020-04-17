@@ -17,6 +17,7 @@ SET(SRCS
     ./inner_service.c
     ./../../tank_map.c
     ./../../app_service/my_osal/my_sem.c
+    ./../../app_service/my_list/my_list.c
     ./../../app_service/tank_msgq/tank_msgq.c
     ./../../app_service/tank_memory/heap_4.c
     ./../../app_service/tank_memory/tank_mm.c
@@ -27,6 +28,7 @@ SET(SRCS
 include_directories(
     ./
     ./../../app_service/my_osal
+    ./../../app_service/my_list
     ./../../app_service/tank_msgq
     ./../../app_service/tank_memory
     ./../../app_service/tank_app
