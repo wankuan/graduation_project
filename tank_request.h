@@ -22,12 +22,21 @@ typedef struct{
     tcp_header_flag_t flag;
 }app_send_msg_t;
 
+
+typedef enum{
+    REQUEST_MM,
+    SENDING,
+    RESTRANSIMTING,
+    FINISHED
+}package_state_t;
+
 typedef struct{
     tank_id_t src_id;
     tank_id_t dst_id;
     tank_id_t package_id;
     tank_package_size_t size;
     tank_package_addr_t addr_shift;
+    package_state_t state;
 }app_package_t;
 
 typedef struct{
@@ -56,6 +65,7 @@ typedef struct{
 typedef enum{
     MM_ALLOCATE = 0,
     MM_FREE,
+    HEART_BEAT,
     APP_PUSH_MSGQ_ADDR,
     APP_TCP_MSG,
     APP_SEND_PACKAGE_REQUEST,
@@ -86,8 +96,16 @@ typedef struct{
 
 
 typedef struct{
+    uint32_t src_id;
+    uint32_t value;
+}app_heart_beat_t;
+
+
+
+typedef struct{
     app_request_type_t type;
     union{
+        app_heart_beat_t heart_beat;
         app_heap_request_t heap;
         app_msgq_info_t msgq;
         app_send_msg_t msg;

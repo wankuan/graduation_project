@@ -12,6 +12,10 @@
 #include "tank_log_api.h"
 #define FILE_NAME "inner_service"
 
+#define HEART_BEAT_TIME         1
+#define HEART_BEAT_LOST_TIME    2
+
+
 // APP所有信息的对应表
 app_info_t               app_info_table[256];
 // 当前系统占用的ID数
@@ -38,6 +42,15 @@ static app_package_t* find_package_info(tank_id_t package_id);
 static void print_app_info_table(void);
 static int find_id_index(tank_id_t id);
 void *handler_thread(void *arg);
+
+
+
+static tank_status_t get_cur_time(time_t *t)
+{
+  time(t);
+  return TANK_SUCCESS;
+}
+
 
 
 static app_package_t* find_package_info(tank_id_t package_id)
@@ -126,6 +139,26 @@ tank_status_t check_systemid(tank_id_t id)
 }
 
 
+void *hear_beat_send_thread(void *arg)
+{
+    app_request_info_t info;
+    while(1){
+        for(int i=0;i<g_app_id_cur_size;++i){
+            memset(&info, 0, sizeof(app_request_info_t));
+            info.type = HEART_BEAT;
+            info.heart_beat.src_id = 0;
+            info.heart_beat.value = 0;
+            tank_msgq_send((tank_msgq_t*)app_info_table[i].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
+            time_t cur_time;
+            get_cur_time(&cur_time);
+            if((cur_time - app_info_table[i].last_refresh)>=HEART_BEAT_LOST_TIME){
+                log_error("app_id:%d has no response\n", app_info_table[i].id);
+            }
+        }
+        sleep(HEART_BEAT_TIME);
+    }
+}
+
 
 void *handler_thread(void *arg)
 {
@@ -150,7 +183,7 @@ void *handler_thread(void *arg)
 
             app_info_table[g_app_id_cur_size].id = info.heap.id;
             app_info_table[g_app_id_cur_size].heap_addr = (void*)addr;
-
+            get_cur_time(&app_info_table[g_app_id_cur_size].last_refresh);
             log_info("src_id:%d, shift:%d\n", info.heap.id, shift);
             g_push_heap_t->shift = shift;
             g_app_id_cur_size += 1;
@@ -194,6 +227,7 @@ void *handler_thread(void *arg)
             app_package_info[g_app_package_seq].dst_id = info.send_package_request.dst_id;
             app_package_info[g_app_package_seq].package_id = g_package_id;
             app_package_info[g_app_package_seq].size = info.send_package_request.size;
+            app_package_info[g_app_package_seq].state = REQUEST_MM;
             void *addr = tank_mm_calloc(&g_inner_service_mm, info.send_package_request.size);
             if(addr == NULL){
                 log_error("addr allocate memory fail, heap full\n");
@@ -223,6 +257,7 @@ void *handler_thread(void *arg)
             log_info("package: 3rd get sender finished ACK\n");
             uint32_t package_id = info.send_package_finshed.package_id;
             app_package_t  *package_info = find_package_info(package_id);
+            package_info->state = RESTRANSIMTING;
             if(package_info == NULL){
                 log_error("can not find package_id:%d\n", package_id);
                 continue;
@@ -250,13 +285,23 @@ void *handler_thread(void *arg)
             log_info("package: 5th get recevier finished ACK\n");
             uint32_t package_id = info.get_package_finished.package_id;
             app_package_t  *package_info = find_package_info(package_id);
+            package_info->state = FINISHED;
             if(package_info == NULL){
                 log_error("can not find package_id:%d\n", package_id);
                 continue;
             }
             // tank_mm_free(&g_inner_service_mm, (void*)(package_info->addr_shift + g_shm_base));
             log_info("=====package transmit exit======\n");
-        }else{
+        }else if(info.type == HEART_BEAT){
+            int index = find_id_index(info.heart_beat.src_id);
+            if(index < 0){
+                log_error("can not find id:%d\n", info.heart_beat.src_id);
+                continue;
+            }
+            get_cur_time(&app_info_table[index].last_refresh);
+            log_debug("heart beat ACK, src_id:%d\n", info.heart_beat.src_id);
+        }
+        else{
             log_error("inner_service get a error msg type, %d\n", info.type);
         }
     }
@@ -269,12 +314,21 @@ void *handler_thread(void *arg)
 
 int main(int argc, char *argv[])
 {
+    pthread_t pid;
     tank_log_init(&mylog, "inner",2048, LEVEL_INFO,
                 LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
                 PORT_FILE|PORT_SHELL
                 );
     log_info("========logger start===========\n");
+
     inner_service_init();
+    pthread_create(&pid, NULL, &hear_beat_send_thread, NULL);
+
+    // while(1){
+    //     app_info_t test;
+    //     get_cur_time(&test);
+    //     sleep(1);
+    // }
     inner_service_deinit();
     log_info("[inner_service]:ending!\n");
     return 0;

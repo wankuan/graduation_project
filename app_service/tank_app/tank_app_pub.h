@@ -12,7 +12,7 @@ typedef uint32_t addr_shift_t;
 typedef uint16_t ta_id_t;
 typedef uint16_t ta_msg_len_t;
 
-#define TA_HOST_MAX 10
+#define TA_HOST_MAX 20
 #define TA_NAME_SIZE_MAX 32
 #define TA_PACKAGE_MAX 20
 
@@ -100,6 +100,7 @@ typedef struct{
 
 
 
+
 typedef struct{
     pthread_t           pid;
     pthread_mutex_t     thread_mutex;
@@ -120,6 +121,7 @@ typedef struct{
     tank_msgq_t         *sender;
     tank_msgq_t         *receiver;
     tank_msgq_t         *recv_package;
+    tank_status_t      (*recv_package_cb)(app_package_info_t* info);
 }ta_info_t;
 
 

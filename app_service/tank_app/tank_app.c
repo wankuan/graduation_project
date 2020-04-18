@@ -8,8 +8,8 @@
 #include "tank_delay.h"
 #include <pthread.h>
 
-
-
+#include "tank_log_api.h"
+#define FILE_NAME "tank_app"
 
 #define APP_HEAP_SIZE 1024
 static tank_status_t app_allocate_heap(ta_info_t *ta);
@@ -20,8 +20,6 @@ tank_msgq_t *g_service_msgq = NULL;
 
 
 
-#include "tank_log_api.h"
-#define FILE_NAME "tank_app"
 
 static tank_status_t find_tcp_state_index(ta_info_t *ta, tank_id_t id, tank_id_t *index);
 static tank_status_t creat_ta_id(ta_info_t *ta, tank_id_t id);
@@ -31,7 +29,6 @@ void *recv_fun(void *arg)
     ta_info_t *ta = (ta_info_t*)arg;
     log_info("[%s] recv_thread running!\n", ta->name);
     my_sem_post(&ta->thread_sem);
-    static uint32_t fsm_cnt = 0;
     while(1){
         tank_app_recv_all(ta);
     }
@@ -43,7 +40,6 @@ void *send_fun(void *arg)
     ta_info_t *ta = (ta_info_t*)arg;
     my_sem_wait(&ta->thread_sem);
     log_info("[%s] send_thread running!\n", ta->name);
-    static uint32_t send_cnt = 0;
     while(1){
         app_package_info_t package_info;
         for(int i=0;i<list_get_len(&ta->send_package_status);i++){
@@ -67,8 +63,6 @@ void *send_fun(void *arg)
                 tank_app_tcp_send(ta, package_info.dst_id, TCP_SYN);
             }
         }
-        // send_cnt += 1;
-        // log_info("send_cnt running cnt:%d\n", send_cnt);
         sleep_ms(20);
     }
 }
@@ -131,12 +125,29 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         tcp_state_t cur_state = 0;
         find_tcp_state(ta, src_id, &cur_state);
         if(cur_state == ESTABLISHED){
-            tank_msgq_send(ta->recv_package, &info.get_package_push, sizeof(app_get_package_push_t));
-            log_info("[%s] 1st: get a package, write into recv msgq buffer\n", ta->name);
+
+            app_package_info_t package_info;
+            package_info.src_id = info.get_package_push.src_id;
+            package_info.dst_id = info.get_package_push.dst_id;
+            package_info.size = info.get_package_push.size;
+            package_info.package = (void*)(info.get_package_push.addr_shift +g_shm_base);
+            log_info("[%s] 1st: get a package from src_id:%d, size:%d\n",
+                    ta->name, info.get_package_push.src_id, info.get_package_push.size);
+            ta->recv_package_cb(&package_info);
+            get_package_finished(ta, info.get_package_push.package_id);
         }else{
             log_warn("[%s]receiver: ID:%d TCP-state not established\n", ta->name, src_id);
         }
-    }else{
+    }else if(info.type == HEART_BEAT){
+        app_request_info_t beat_info;
+        memset(&beat_info, 0, sizeof(app_request_info_t));
+            beat_info.type = HEART_BEAT;
+            beat_info.heart_beat.src_id = ta->id;
+            beat_info.heart_beat.value = info.heart_beat.value + 1;
+            tank_msgq_send(ta->sender, &beat_info, TANK_MSG_NORMAL_SIZE);
+            log_debug("[%s]send the heart beat response\n", ta->name);
+    }
+    else{
         log_info("[%s]msg type is error\n", ta->name);
         return TANK_FAIL;
     }
@@ -216,7 +227,17 @@ static tank_status_t find_tcp_state_index(ta_info_t *ta, tank_id_t id, tank_id_t
     log_error("[%s][find_index]can not find id:%d\n", ta->name, id);
     return TANK_FAIL;
 }
+tank_status_t tank_app_recv_cb_register(ta_info_t *ta, tank_status_t (*cb)(app_package_info_t* info))
+{
 
+    return TANK_SUCCESS;
+}
+
+__weak tank_status_t tank_app_recv_package_callback(app_package_info_t* info)
+{
+    log_warn("recv callback function not defined\n");
+    return TANK_SUCCESS;
+}
 tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type)
 {
     log_info("============ app init start ===========\n");
@@ -231,6 +252,7 @@ tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol
     ta->protocol = protocol;
     ta->type = type;
     ta->send_package_cur_index = 0;
+    ta->recv_package_cb = tank_app_recv_package_callback;
     snprintf(ta->name, 32, "APP%d", ta->id);
     app_allocate_heap(ta);
     app_allocate_msgq(ta);

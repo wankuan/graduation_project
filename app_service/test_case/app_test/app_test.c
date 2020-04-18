@@ -28,27 +28,24 @@ char name_buf[10][8]={
 };
 
 
-void *recv(void *arg)
+tank_status_t tank_app_recv_package_callback(app_package_info_t* info)
 {
-    ta_info_t *ta = (ta_info_t *)arg;
-    while(1){
-        tank_id_t src_id;
-        uint16_t size;
-        uint32_t num = 0;
-        ta_recv_package(ta, &src_id, &num, &size, 100);
-        log_info("=======get a messgae from src_id:%d, size:%d, info:%d=======\n", src_id, size, num);
-        // uint16_t cur_index = strlen(buf);
-        // buf[cur_index] = num + '0';
-        // buf[cur_index+1] = '\0';
-        // ta_send_package(ta, src_id, buf, cur_index+2, 0);
-        // sleep(1);
+    static uint32_t num;
+    memcpy(&num, info->package, info->size);
+    log_info("=======get a messgae from src_id:%d, size:%d, info:%d=======\n",
+            info->src_id, info->size, num);
+    if(info->src_id == 3){
+        log_info("============send a msg num:%d============\n", num);
+        ta_send_package(&app_demo, info->src_id, &num, sizeof(num), 0);
     }
+
+    return TANK_SUCCESS;
 }
 
 int count = 0;
 int main(int argc, char *argv[])
 {
-    pthread_t pid;
+    // pthread_t pid;
     uint32_t value = 2048;
     printf("value %x, mask %x slice %x\n", value, PACKAGE_MASK, PACKAGE_SLICE(value));
     if(argc == 4){
@@ -68,18 +65,10 @@ int main(int argc, char *argv[])
                 }
             }
 
-            // sleep(1);
-            // write_tcp_state(&app_demo, dst_id, SYN_SENT);
-            // tank_app_tcp_send(&app_demo, dst_id, TCP_SYN);
-
-            // char buf_test[100] = "hello, my guy!";
-            // ta_send_package(&app_demo, dst_id, buf_test, 30, 0);
-
             while(1){
                 static uint32_t num = 0;
-            log_info("============send a msg num:%d============\n", num);
+                log_info("============send a msg num:%d============\n", num);
                 ta_send_package(&app_demo, dst_id, &num, sizeof(num), 0);
-
                 sleep_ms(1000);
                 num += 1;
             }
@@ -102,8 +91,8 @@ int main(int argc, char *argv[])
                     tank_app_listen(&app_demo2, i);
                 }
             }
-            pthread_create(&pid, NULL, recv, &app_demo);
-            pthread_create(&pid, NULL, recv, &app_demo2);
+            // pthread_create(&pid, NULL, recv, &app_demo);
+            // pthread_create(&pid, NULL, recv, &app_demo2);
 
             tank_app_destory(&app_demo);
             goto exit;

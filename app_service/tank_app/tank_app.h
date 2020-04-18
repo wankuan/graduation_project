@@ -4,6 +4,8 @@
 #include "tank_app_pub.h"
 #include "tank_request.h"
 
+#define __weak __attribute__((weak))
+
 
 void *recv_fun(void *arg);
 void *send_fun(void *arg);
@@ -16,19 +18,19 @@ tank_status_t find_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t *state);
 tank_status_t write_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t state);
 
 
-
 tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type);
+
+
 tank_status_t tank_app_destory(ta_info_t *ta);
+
+
+tank_status_t tank_app_recv_package_callback(app_package_info_t* info);
 
 tank_status_t tank_app_tcp_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag_t flag);
 
 
 tank_status_t tank_app_recv_msg(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag);
 tank_status_t tank_app_recv_msg_wait(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag);
-
-
-
-
 
 tank_status_t send_package_request(ta_info_t *ta, uint16_t index);
 tank_status_t get_package_allocate(ta_info_t *ta, uint16_t index, app_request_info_t *info);
@@ -39,13 +41,5 @@ tank_status_t get_package_finished(ta_info_t *ta, uint32_t package_id);
 
 tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package, uint32_t size, uint32_t tiemout);
 tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, uint16_t *size, uint16_t oversize);
-// ta_id_t         ta_socket_creat(ta_protocol_t protocol, ta_type_t type);
-// tank_status_t     ta_connect(ta_id_t id, ta_addr_t addr);
-// tank_status_t     ta_bind(ta_id_t id, ta_addr_t addr);
-// tank_status_t     ta_listen(ta_id_t id, uint16_t max_len);
-// ta_id_t         ta_accept(ta_id_t id, ta_addr_t *client_addr, ta_accept_type_t type);
-// ta_msg_len_t    ta_read(ta_id_t id, const char *buf, ta_msg_len_t max_len);
-// ta_msg_len_t    ta_write(ta_id_t id, char *buf, ta_msg_len_t max_len);
-
 
 #endif

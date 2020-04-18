@@ -39,39 +39,3 @@ tank_status_t find_fsm_table(tcp_state_t cur_state, tcp_state_t* next_state, tcp
     log_error("not find match state in fsm-table\n");
     return TANK_FAIL;
 }
-static uint32_t fsm_cnt = 0;
-
-
-
-// tank_status_t tank_fsm_recv(ta_info_t *ta)
-// {
-//     tank_id_t src_id = 0;
-//     tcp_state_t cur_state = 0;
-//     tcp_state_t next_state = 0;
-//     tcp_header_flag_t recv_flag = 0;
-//     tcp_header_flag_t send_flag = 0;
-//     tank_status_t (*fsm_action)(void *) = NULL;
-//     fsm_cnt ++;
-//     log_info("fsm running cnt:%d\n",fsm_cnt);
-
-//     tank_app_recv_msg_wait(ta, &src_id, &recv_flag);
-//     if(check_ta_id_exist(ta, src_id) == TANK_FAIL){
-//         log_error("ID:%d invalid, check it!\n", src_id);
-//         tank_app_tcp_send(ta, src_id, TCP_ID_INVALID);
-//         return TANK_FAIL;
-//     }
-//     find_tcp_state(ta, src_id, &cur_state);
-
-//     if(find_fsm_table(cur_state, &next_state, recv_flag, &send_flag, &fsm_action)){
-//         return TANK_FAIL;
-//     }
-//     fsm_action(NULL);
-//     write_tcp_state(ta, src_id, next_state);
-//     if(send_flag != TCP_NON){
-//         tank_app_tcp_send(ta, src_id, send_flag);
-//     }else{
-//         log_info("unnecessary to send\n");
-//     }
-//     log_info("fsm exit\n");
-//     return TANK_SUCCESS;
-// }
