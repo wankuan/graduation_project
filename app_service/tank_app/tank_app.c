@@ -29,17 +29,10 @@ static tank_status_t creat_ta_id(ta_info_t *ta, tank_id_t id);
 void *recv_fun(void *arg)
 {
     ta_info_t *ta = (ta_info_t*)arg;
-    for(int i=0;i<10;++i){
-        if(i != ta->id){
-            tank_app_listen(ta, i);
-        }
-    }
     log_info("[%s] recv_thread running!\n", ta->name);
     my_sem_post(&ta->thread_sem);
     static uint32_t fsm_cnt = 0;
     while(1){
-        fsm_cnt ++;
-        log_info("fsm running cnt:%d\n",fsm_cnt);
         tank_app_recv_all(ta);
     }
 }
@@ -56,12 +49,22 @@ void *send_fun(void *arg)
         for(int i=0;i<list_get_len(&ta->send_package_status);i++){
             list_get_node(&ta->send_package_status, i, &package_info);
             send_package_state_t state = package_info.state;
-            if(state == SEND_WAIT_REQUEST){
-                send_package_request(ta, i);
-            }else if(state == SEND_FINISHE){
-                send_package_finished(ta, i);
-            }else{
+            tcp_state_t cur_state = 0;
+            find_tcp_state(ta, package_info.dst_id, &cur_state);
+            if(cur_state == ESTABLISHED){
+                if(state == SEND_WAIT_REQUEST){
+                    send_package_request(ta, i);
+                }else if(state == SEND_FINISHE){
+                    send_package_finished(ta, i);
+                }else{
 
+                }
+            }else if(cur_state == SYN_SENT){
+                log_info("TCP is SYN_SENT\n");
+            }else{
+                log_warn("TCP not estabilished, wait for established\n");
+                write_tcp_state(ta, package_info.dst_id, SYN_SENT);
+                tank_app_tcp_send(ta, package_info.dst_id, TCP_SYN);
             }
         }
         // send_cnt += 1;
@@ -77,7 +80,7 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     tank_msgq_recv_wait(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE);
 
-    if(info.type == APP_SEND_MSG){
+    if(info.type == APP_TCP_MSG){
         log_info("[%s][TCP]shake hand, recv a msg\n", ta->name);
         tcp_state_t cur_state = 0;
         tcp_state_t next_state = 0;
@@ -105,9 +108,8 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         }else{
             log_info("[%s][TCP]unnecessary to send\n", ta->name);
         }
-        log_info("[%s][TCP]shake hand, exit", ta->name);
+        log_info("[%s][TCP]shake hand, exit\n", ta->name);
     }else if(info.type == APP_GET_PACKAGE_ALLOCATE){
-        log_info("[%s]sender: get package allocate info\n", ta->name);
         app_package_info_t package_info;
         for(int i=0;i<list_get_len(&ta->send_package_status);i++){
             list_get_node(&ta->send_package_status, i, &package_info);
@@ -120,7 +122,6 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
             }
         }
     }else if(info.type == APP_GET_PACKAGE_PUSH){
-        log_info("[%s]receiver: get a package \n", ta->name);
         tank_id_t src_id = info.get_package_push.src_id;
         if(check_ta_id_exist(ta, src_id) == TANK_FAIL){
             log_error("[%s]receiver:ID:%d invalid, check it!\n", ta->name, src_id);
@@ -131,7 +132,7 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         find_tcp_state(ta, src_id, &cur_state);
         if(cur_state == ESTABLISHED){
             tank_msgq_send(ta->recv_package, &info.get_package_push, sizeof(app_get_package_push_t));
-            log_info("[%s]receiver: package has write into msgq, please recv it\n", ta->name);
+            log_info("[%s] 1st: get a package, write into recv msgq buffer\n", ta->name);
         }else{
             log_warn("[%s]receiver: ID:%d TCP-state not established\n", ta->name, src_id);
         }
@@ -154,7 +155,7 @@ tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, u
     }else{
         memcpy(packgae, (void*)(info.addr_shift+g_shm_base), *size);
     }
-    log_info("[%s][recv_package]get a package from src_id:%d, size:%d\n", ta->name, *src_id, *size);
+    log_info("[%s][recv_package_msgq]get a package from src_id:%d, size:%d\n", ta->name, *src_id, *size);
     get_package_finished(ta, info.package_id);
     return TANK_SUCCESS;
 }
@@ -260,10 +261,9 @@ tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package, ui
         log_error("[%s]ta_send_package into buffer error, list is full!\n");
         return TANK_FAIL;
     }
-
-    log_info("[%s]ta_send_package into buffer, src_id:%d, dst_id:%d, size:%d\n",
+    log_info("[%s]==========start send a package==========\n", ta->name);
+    log_info("[%s] pre: write packgae into buffer, src_id:%d, dst_id:%d, size:%d\n",
         ta->name, ta->id, dst_id, size);
-
     return TANK_SUCCESS;
 }
 tank_status_t send_package_request(ta_info_t *ta, uint16_t index)
@@ -284,7 +284,7 @@ tank_status_t send_package_request(ta_info_t *ta, uint16_t index)
     }
     package_info.state = SEND_WAIT_ALLOCATE;
     list_rewrite_node(&ta->send_package_status, index, &package_info);
-    log_info("[%s]send_package_request, src_id:%d, dst_id:%d, size:%d\n",
+    log_info("[%s] 1st: send_package_request, src_id:%d, dst_id:%d, size:%d\n",
             ta->name, info.send_package_request.src_id, info.send_package_request.dst_id, info.send_package_request.size
             );
     return TANK_SUCCESS;
@@ -301,9 +301,8 @@ tank_status_t get_package_allocate(ta_info_t *ta, uint16_t index, app_request_in
         log_info("[%s][get_package_allocate]recv id is error, get_package_allocate dst id %d\n", ta->name, info->send_package_allocate.dst_id);
         return TANK_FAIL;
     }
-    log_info("[%s]get_package_allocate, package_id:%d shift:%d\n", ta->name, package_info.package_id, info->send_package_allocate.addr_shift);
+    log_info("[%s] 2nd: get package allocate info, package_id:%d shift:%d\n", ta->name, package_info.package_id, info->send_package_allocate.addr_shift);
     memcpy((void*)addr, package_info.package, package_info.size);
-    log_info("[%s]write data into memory, package_id:%d shift:%d\n", ta->name, package_info.package_id, info->send_package_allocate.addr_shift);
     package_info.state = SEND_FINISHE;
     list_rewrite_node(&ta->send_package_status, index, &package_info);
     return TANK_SUCCESS;
@@ -326,7 +325,7 @@ tank_status_t send_package_finished(ta_info_t *ta, uint16_t index)
     list_delete_node(&ta->send_package_status, index);
     // list_rewrite_node(&ta->send_package_status, index, &package_info);
 
-    log_info("[%s]send_package_finished, ACK, package_id:%d\n",
+    log_info("[%s] 3rd: send package finished, ACK, package_id:%d\n",
             ta->name, info.send_package_finshed.package_id
             );
     return TANK_SUCCESS;
@@ -336,13 +335,13 @@ tank_status_t get_package_finished(ta_info_t *ta, uint32_t package_id)
     app_request_info_t info;
     tank_status_t send_status = 0;
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
-    info.type = APP_GET_PACKAGE_FINISHED;
+    info.type = APP_GET_PACKAGE_ACK;
     info.get_package_finished.package_id = package_id;
     send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
     if(send_status == TANK_FAIL){
         log_error("[%s][get_package_finished]send error\n", ta->name);
     }
-    log_info("[%s][recv_package]send read package finished ACK, package_id:%d\n",
+    log_info("[%s] 2nd: send a ACK, package_id:%d\n",
             ta->name, info.send_package_finshed.package_id
             );
     return TANK_SUCCESS;
@@ -378,7 +377,7 @@ tank_status_t tank_app_recv_package_wait(ta_info_t *ta, tank_id_t *src_id, void 
     memcpy(package, (void*)addr, *size);
 
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
-    info.type = APP_GET_PACKAGE_FINISHED;
+    info.type = APP_GET_PACKAGE_ACK;
     info.get_package_finished.package_id = package_id;
     tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
     log_info("[%s]get_package_finished, package_id:%d\n", ta->name, package_id);
@@ -392,7 +391,7 @@ tank_status_t tank_app_tcp_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag
         return TANK_FAIL;
     }
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
-    info.type = APP_SEND_MSG;
+    info.type = APP_TCP_MSG;
     info.msg.src_id = ta->id;
     info.msg.dst_id = dst_id;
     info.msg.flag = flag;
@@ -410,7 +409,7 @@ tank_status_t tank_app_recv_msg(ta_info_t *ta, tank_id_t *src_id, tcp_header_fla
     if(tank_msgq_recv(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE) == TANK_FAIL){
         return TANK_FAIL;
     }
-    if(info.type == APP_SEND_MSG){
+    if(info.type == APP_TCP_MSG){
         if(info.msg.dst_id == ta->id){
             *flag = info.msg.flag;
             *src_id = info.msg.src_id;
@@ -434,7 +433,7 @@ tank_status_t tank_app_recv_msg_wait(ta_info_t *ta, tank_id_t *src_id, tcp_heade
     app_request_info_t info;
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     tank_msgq_recv_wait(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE);
-    if(info.type == APP_SEND_MSG){
+    if(info.type == APP_TCP_MSG){
         if(info.msg.dst_id == ta->id){
             *flag = info.msg.flag;
             *src_id = info.msg.src_id;
@@ -510,7 +509,7 @@ static tank_status_t app_allocate_heap(ta_info_t *ta)
     tank_msgq_send(g_service_msgq, &info, TANK_MSGQ_NORMAL_SIZE);
 
     log_info("[%s]wait for inner_service allocate finished\n", ta->name);
-    app_heap_get_t *app_get = (app_heap_get_t *)(SEM_ADDR);
+    inner_service_push_heap_t *app_get = (inner_service_push_heap_t *)(SEM_ADDR);
     my_sem_wait(&app_get->sem);
     log_info("[%s]inner_service allocate OK\n", ta->name);
     log_info("[%s]allocate info, addr_base:%p, shift:%d\n", ta->name, (void*)g_shm_base, app_get->shift);

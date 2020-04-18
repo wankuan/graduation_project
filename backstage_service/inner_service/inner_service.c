@@ -7,29 +7,40 @@
 #include "tank_request.h"
 #include "inner_service.h"
 
-app_info_t               app_info_table[256];
-tank_id_t                app_id_lut[10] = {0,1,2,3,4,5,6,7,8,9};
-
-uint16_t                 g_app_id_seq = 0;
-tank_mm_t                g_in_swap_mm;
-
-pthread_t                g_service_pid;
-tank_msgq_t             *g_service_request_msgq;
-app_heap_get_t          *g_app_get;
-app_request_info_t               g_app_request;
-
-app_package_t app_package_info[16*1024] = {0};
-uint16_t       g_app_package_seq = 0;
 
 
 #include "tank_log_api.h"
 #define FILE_NAME "inner_service"
 
+// APP所有信息的对应表
+app_info_t               app_info_table[256];
+// 当前系统占用的ID数
+uint16_t                 g_app_id_cur_size = 0;
+// 在本系统的ID
+tank_id_t                app_id_lut[10] = {0,1,2,3,4,5,6,7,8,9};
+// 内部堆管理结构体
+tank_mm_t                g_inner_service_mm;
+// 线程PID
+pthread_t                g_service_pid;
+// 后台接收消息队列
+tank_msgq_t             *g_service_request_msgq;
+// 推送后台给APP分配的内存
+inner_service_push_heap_t          *g_push_heap_t;
 
-tank_status_t app_malloc_init(void);
+app_package_t app_package_info[16*1024] = {0};
+
+// 全局packgae ID，每发起packgae将会增加1
+static uint32_t       g_app_package_seq = 0;
 
 
-app_package_t* find_package_info(tank_id_t package_id)
+static tank_status_t app_malloc_init(void);
+static app_package_t* find_package_info(tank_id_t package_id);
+static void print_app_info_table(void);
+static int find_id_index(tank_id_t id);
+void *handler_thread(void *arg);
+
+
+static app_package_t* find_package_info(tank_id_t package_id)
 {
     for(int i=0;i<g_app_package_seq;++i){
         if(app_package_info[i].package_id == package_id){
@@ -40,10 +51,10 @@ app_package_t* find_package_info(tank_id_t package_id)
     return NULL;
 }
 
-void print_app_info_table(void)
+static void print_app_info_table(void)
 {
     log_info("=========app_info_table============\n");
-    for(int i=0;i<g_app_id_seq;++i){
+    for(int i=0;i<g_app_id_cur_size;++i){
         log_info("id:%d, heap:%p, msgq_r:%p, msgq_s:%p\n",
         app_info_table[i].id, app_info_table[i].heap_addr,
         app_info_table[i].msgq_recv_addr, app_info_table[i].msgq_send_addr
@@ -58,20 +69,27 @@ tank_status_t inner_service_init(void)
     tank_creat_shm();
     log_info("start addr:0x%x\n", g_shm_base);
     log_info("inner swap addr:0x%x\n", INNER_SWAP_ADDR);
-    tank_mm_register(&g_in_swap_mm, INNER_SWAP_ADDR, INNER_SWAP_SIZE, "inner_service_mm");
+    tank_mm_register(&g_inner_service_mm, INNER_SWAP_ADDR, INNER_SWAP_SIZE, "inner_service_mm");
     app_malloc_init();
+    pthread_create(&g_service_pid,NULL,&handler_thread,NULL);
     return TANK_SUCCESS;
-
 }
-tank_status_t app_malloc_init(void)
+
+tank_status_t inner_service_deinit(void)
 {
-    g_app_get = (app_heap_get_t *)SEM_ADDR;
-    log_info("sem addr:%p  size:%d\n", &g_app_get->sem, sizeof(my_sem_t));
+    pthread_join(g_service_pid,NULL);
+    return TANK_SUCCESS;
+}
 
-    sem_destroy(&g_app_get->sem);
-    my_sem_creat(&g_app_get->sem, 0);
+static tank_status_t app_malloc_init(void)
+{
+    g_push_heap_t = (inner_service_push_heap_t *)SEM_ADDR;
+    log_info("sem addr:%p  size:%d\n", &g_push_heap_t->sem, sizeof(my_sem_t));
 
-    g_service_request_msgq = (tank_msgq_t*)tank_mm_malloc(&g_in_swap_mm, sizeof(tank_msgq_t)+50*20);
+    sem_destroy(&g_push_heap_t->sem);
+    my_sem_creat(&g_push_heap_t->sem, 0);
+
+    g_service_request_msgq = (tank_msgq_t*)tank_mm_malloc(&g_inner_service_mm, sizeof(tank_msgq_t)+50*20);
     if(g_service_request_msgq == NULL){
         log_error("g_service_request_msgq allocate memory fail, heap full\n");
     }
@@ -83,9 +101,9 @@ tank_status_t app_malloc_init(void)
     return TANK_SUCCESS;
 }
 
-int find_id_index(tank_id_t id)
+static int find_id_index(tank_id_t id)
 {
-    for(int i=0;i<g_app_id_seq;++i){
+    for(int i=0;i<g_app_id_cur_size;++i){
         if(app_info_table[i].id == id){
             log_debug("find id index:%d\n", i);
             return i;
@@ -109,40 +127,38 @@ tank_status_t check_systemid(tank_id_t id)
 
 
 
-void *main_thread(void *arg)
+void *handler_thread(void *arg)
 {
     app_request_info_t info;
     while(1){
         memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
         tank_msgq_recv_wait(g_service_request_msgq, &info, TANK_MSGQ_NORMAL_SIZE);
         if(info.type == MM_ALLOCATE){
-            log_info("======app allocate start======\n");
-            log_info("id:%d, size:%d\n", info.heap.id, info.heap.size);
+            log_info("======MM_ALLOCATE======\n");
+            log_info("src_id:%d, request size:%d\n", info.heap.id, info.heap.size);
             int index = find_id_index(info.heap.id);
             if(index >= 0){
-                log_error("id:%d has been malloc\n", info.heap.id);
+                log_error("src_id:%d has been malloc\n", info.heap.id);
                 continue;
             }
-            log_info("start malloc\n");
-            void *addr = tank_mm_calloc(&g_in_swap_mm, info.heap.size);
+            void *addr = tank_mm_calloc(&g_inner_service_mm, info.heap.size);
             if(addr == NULL){
                 log_error("addr allocate memory fail, heap full\n");
             }
-            log_info("[%s]remain:%d\n", g_in_swap_mm.name, g_in_swap_mm.heap.xFreeBytesRemaining);
+            log_info("inner_service heap remain:%d\n", g_inner_service_mm.heap.xFreeBytesRemaining);
             uint32_t shift = (uint32_t)addr - g_shm_base;
 
-            app_info_table[g_app_id_seq].id = info.heap.id;
-            app_info_table[g_app_id_seq].heap_addr = (void*)addr;
+            app_info_table[g_app_id_cur_size].id = info.heap.id;
+            app_info_table[g_app_id_cur_size].heap_addr = (void*)addr;
 
-            log_info("id:%d, shift:%d\n", info.heap.id, shift);
-            g_app_get->shift = shift;
-            g_app_id_seq += 1;
-
-            log_info("======app allocate exit======\n");
-            my_sem_post(&g_app_get->sem);
+            log_info("src_id:%d, shift:%d\n", info.heap.id, shift);
+            g_push_heap_t->shift = shift;
+            g_app_id_cur_size += 1;
+            log_info("======MM_ALLOCATE EXIT======\n");
+            my_sem_post(&g_push_heap_t->sem);
         }else if(info.type == APP_PUSH_MSGQ_ADDR){
-            log_info("======app push msgq start======\n");
-            log_info("id:%d, type:%d, recv_shift:%d, send_shift:%d\n", info.msgq.id, info.type, info.msgq.recv_shift, info.msgq.send_shift);
+            log_info("======APP_PUSH_MSGQ_ADDR======\n");
+            log_info("src_id:%d, receiver_shift:%d, send_shift:%d\n", info.msgq.id, info.msgq.recv_shift, info.msgq.send_shift);
             int index = find_id_index(info.msgq.id);
             if(index < 0){
                 log_error("can not find id:%d\n", info.msgq.id);
@@ -150,24 +166,24 @@ void *main_thread(void *arg)
             }
             app_info_table[index].msgq_recv_addr = (void*)info.msgq.recv_shift + g_shm_base;
             app_info_table[index].msgq_send_addr = (void*)info.msgq.send_shift + g_shm_base;
-            log_info("has write into table\n");
-            log_info("======app push msgq exit======\n");
+            log_info("inner_service get app msgq info successfully\n");
+            log_info("======APP_PUSH_MSGQ_ADDR EXIT======\n");
             print_app_info_table();
-
-        }else if(info.type == APP_SEND_MSG){
-            log_info("======app msg transmit start======\n");
+        }else if(info.type == APP_TCP_MSG){
+            log_info("======APP_TCP_MSG======\n");
             int index = find_id_index(info.msg.dst_id);
             if(index < 0){
                 log_error("can not find id:%d\n", info.msg.dst_id);
                 continue;
             }
             tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, APP_MSG_SIZE);
-            log_info("src_id:%d, dst_id:%d, flag:%d\n",
+            log_info("restransmit src_id:%d, dst_id:%d, flag:%d\n",
                     info.msg.src_id, info.msg.dst_id, info.msg.flag
                     );
-            log_info("======app msg transmit exit======\n");
+            log_info("======APP_TCP_MSG EXIT======\n");
         }else if(info.type == APP_SEND_PACKAGE_REQUEST){
-            log_info("======APP_SEND_PACKAGE_REQUEST start======\n");
+            log_info("=====package transmit start======\n");
+            log_info("package: 1st request\n");
             int index = find_id_index(info.send_package_request.dst_id);
             if(index < 0){
                 log_error("can not find id:%d\n", info.send_package_request.dst_id);
@@ -178,8 +194,7 @@ void *main_thread(void *arg)
             app_package_info[g_app_package_seq].dst_id = info.send_package_request.dst_id;
             app_package_info[g_app_package_seq].package_id = g_package_id;
             app_package_info[g_app_package_seq].size = info.send_package_request.size;
-            log_info("start malloc package\n");
-            void *addr = tank_mm_calloc(&g_in_swap_mm, info.send_package_request.size);
+            void *addr = tank_mm_calloc(&g_inner_service_mm, info.send_package_request.size);
             if(addr == NULL){
                 log_error("addr allocate memory fail, heap full\n");
                 continue;
@@ -192,10 +207,9 @@ void *main_thread(void *arg)
                     app_package_info[g_app_package_seq].package_id, app_package_info[g_app_package_seq].size,
                     app_package_info[g_app_package_seq].addr_shift
                     );
-            log_info("======APP_SEND_PACKAGE_REQUEST exit======\n");
 
             memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
-            log_info("======APP_GET_PACKAGE_ALLOCATE start======\n");
+            log_info("package: 2nd allocate\n");
             index =  find_id_index(app_package_info[g_app_package_seq].src_id);
             info.type = APP_GET_PACKAGE_ALLOCATE;
             info.send_package_allocate.addr_shift = add_shift;
@@ -203,24 +217,16 @@ void *main_thread(void *arg)
             info.send_package_allocate.package_id = app_package_info[g_app_package_seq].package_id;
             tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
 
-            log_info("======APP_GET_PACKAGE_ALLOCATE exit======\n");
-
             g_app_package_seq += 1;
             g_package_id += 1;
         }else if(info.type == APP_SEND_PACKAGE_FINISHED){
-            log_info("======APP_SEND_PACKAGE_FINISHED start======\n");
+            log_info("package: 3rd get sender finished ACK\n");
             uint32_t package_id = info.send_package_finshed.package_id;
             app_package_t  *package_info = find_package_info(package_id);
             if(package_info == NULL){
                 log_error("can not find package_id:%d\n", package_id);
                 continue;
             }
-
-            uint32_t *num = (void*)(package_info->addr_shift + g_shm_base);
-            log_info("recv data num:%d\n", *num);
-            log_info("======APP_SEND_PACKAGE_FINISHED exit======\n");
-
-            log_info("======APP_GET_PACKAGE_PUSH start======\n");
 
             memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
             info.type = APP_GET_PACKAGE_PUSH;
@@ -230,20 +236,28 @@ void *main_thread(void *arg)
             info.get_package_push.addr_shift = package_info->addr_shift;
             info.get_package_push.size = package_info->size;
             tank_id_t index =  find_id_index(info.get_package_push.dst_id);
-            tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
-            log_info("======APP_GET_PACKAGE_PUSH exit======\n");
-        }else if(info.type == APP_GET_PACKAGE_FINISHED){
-            log_info("======APP_GET_PACKAGE_FINISHED start======\n");
+            if(tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE) == TANK_FAIL){
+                log_error("package: 4th restransmit error\n");
+                continue;
+            }
+            log_info("package: 4th restransmit package\n");
+            log_info("src_id:%d, dst_id:%d, package_id:%d\n",
+                        info.get_package_push.src_id,
+                        info.get_package_push.dst_id,
+                        info.get_package_push.package_id);
+
+        }else if(info.type == APP_GET_PACKAGE_ACK){
+            log_info("package: 5th get recevier finished ACK\n");
             uint32_t package_id = info.get_package_finished.package_id;
             app_package_t  *package_info = find_package_info(package_id);
             if(package_info == NULL){
                 log_error("can not find package_id:%d\n", package_id);
                 continue;
             }
-            // tank_mm_free(&g_in_swap_mm, (void*)(package_info->addr_shift + g_shm_base));
-            log_info("======APP_GET_PACKAGE_FINISHED exit======\n");
+            // tank_mm_free(&g_inner_service_mm, (void*)(package_info->addr_shift + g_shm_base));
+            log_info("=====package transmit exit======\n");
         }else{
-            log_error("error type, %d\n", info.type);
+            log_error("inner_service get a error msg type, %d\n", info.type);
         }
     }
     return NULL;
@@ -255,15 +269,13 @@ void *main_thread(void *arg)
 
 int main(int argc, char *argv[])
 {
-    tank_log_init(&mylog, "inner",2048, LEVEL_DEBUG,
+    tank_log_init(&mylog, "inner",2048, LEVEL_INFO,
                 LOG_INFO_TIME|LOG_INFO_OUTAPP|LOG_INFO_LEVEL,
                 PORT_FILE|PORT_SHELL
                 );
     log_info("========logger start===========\n");
-    printf("app_request_info_t size:%d\n", sizeof(app_request_info_t));
     inner_service_init();
-    pthread_create(&g_service_pid,NULL,&main_thread,NULL);
-    pthread_join(g_service_pid,NULL);
+    inner_service_deinit();
     log_info("[inner_service]:ending!\n");
     return 0;
 }

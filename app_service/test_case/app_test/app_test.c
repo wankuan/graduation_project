@@ -62,19 +62,25 @@ int main(int argc, char *argv[])
             log_info("========logger start===========\n");
             log_info("sender\n");
             tank_app_creat(&app_demo, src_id, 0, 0);
+            for(int i=0;i<10;++i){
+                if(i != app_demo.id){
+                    tank_app_listen(&app_demo, i);
+                }
+            }
 
-            sleep(1);
-            write_tcp_state(&app_demo, dst_id, SYN_SENT);
-            tank_app_tcp_send(&app_demo, dst_id, TCP_SYN);
+            // sleep(1);
+            // write_tcp_state(&app_demo, dst_id, SYN_SENT);
+            // tank_app_tcp_send(&app_demo, dst_id, TCP_SYN);
 
             // char buf_test[100] = "hello, my guy!";
             // ta_send_package(&app_demo, dst_id, buf_test, 30, 0);
 
             while(1){
                 static uint32_t num = 0;
+            log_info("============send a msg num:%d============\n", num);
                 ta_send_package(&app_demo, dst_id, &num, sizeof(num), 0);
-                log_info("============send a msg num:%d============\n", num);
-                sleep_ms(100);
+
+                sleep_ms(1000);
                 num += 1;
             }
             tank_app_destory(&app_demo);
@@ -86,7 +92,16 @@ int main(int argc, char *argv[])
             log_info("========logger start===========\n");
             tank_app_creat(&app_demo, src_id, 0, 0);
             tank_app_creat(&app_demo2, 2, 0, 0);
-
+            for(int i=0;i<10;++i){
+                if(i != app_demo.id){
+                    tank_app_listen(&app_demo, i);
+                }
+            }
+            for(int i=0;i<10;++i){
+                if(i != app_demo2.id){
+                    tank_app_listen(&app_demo2, i);
+                }
+            }
             pthread_create(&pid, NULL, recv, &app_demo);
             pthread_create(&pid, NULL, recv, &app_demo2);
 

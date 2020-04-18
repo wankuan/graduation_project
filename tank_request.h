@@ -57,13 +57,13 @@ typedef enum{
     MM_ALLOCATE = 0,
     MM_FREE,
     APP_PUSH_MSGQ_ADDR,
-    APP_SEND_MSG,
+    APP_TCP_MSG,
     APP_SEND_PACKAGE_REQUEST,
     APP_GET_PACKAGE_ALLOCATE,
     APP_SEND_PACKAGE_FINISHED,
 
     APP_GET_PACKAGE_PUSH,
-    APP_GET_PACKAGE_FINISHED,
+    APP_GET_PACKAGE_ACK,
     PUSH_ERROR
 }app_request_type_t;
 
@@ -73,11 +73,12 @@ typedef struct{
     uint32_t size;
 }app_heap_request_t;
 
-// socket获得的ID和偏移量
+
+// 后台向APP推送分配结果
 typedef struct{
     my_sem_t sem;
     uint32_t shift;
-}app_heap_get_t;
+}inner_service_push_heap_t;
 
 
 #define APP_MSG_SIZE (sizeof(app_request_type_t)+sizeof(app_send_msg_t))
@@ -90,6 +91,7 @@ typedef struct{
         app_heap_request_t heap;
         app_msgq_info_t msgq;
         app_send_msg_t msg;
+
         app_send_package_request_t send_package_request;
         app_get_package_allocate_t send_package_allocate;
         app_send_package_finished_t send_package_finshed;

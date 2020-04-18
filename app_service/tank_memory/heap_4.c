@@ -92,7 +92,7 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
                 /* Byte alignment required. */
                 // 往大的分配，保证是8的倍数
                 xWantedSize += ( portBYTE_ALIGNMENT - ( xWantedSize & portBYTE_ALIGNMENT_MASK ) );
-                log_info("the size not reach 8 mask\n");
+                log_debug("the size not reach 8 mask\n");
             }
         }
         if( ( xWantedSize > 0 ) && ( xWantedSize <= heap->xFreeBytesRemaining ) )
@@ -163,22 +163,22 @@ void *pvPortMalloc(heap_info_t *heap, uint32_t xWantedSize )
             }
             else
             {
-                log_info("[ERROR]reach end block %d\n", heap->xFreeBytesRemaining);
+                log_error("reach end block %d\n", heap->xFreeBytesRemaining);
                 return NULL;
             }
         }
         else
         {
-            log_info("[ERROR]size over, remain %d\n", heap->xFreeBytesRemaining - xHeapStructSize);
+            log_error("size over, remain %d\n", heap->xFreeBytesRemaining - xHeapStructSize);
             return NULL;
         }
     }
     else
     {
-        log_info("[ERROR]size over max %d\n", xBlockAllocatedBit);
+        log_error("size over max %d\n", xBlockAllocatedBit);
         return NULL;
     }
-    log_info("allocated OK, return:%p, size:%d\n", pvReturn, xWantedSize-xHeapStructSize);
+    log_debug("allocated OK, return:%p, size:%d\n", pvReturn, xWantedSize-xHeapStructSize);
     return pvReturn;
 }
 /*-----------------------------------------------------------*/
@@ -200,11 +200,11 @@ void vPortFree(heap_info_t *heap, void *pv)
         /* Check the block is actually allocated. */
         if((pxLink->xBlockSize & xBlockAllocatedBit )==0)
         {
-            log_info("[ERROR]the memory not to allocated\n");
+            log_error("the memory not to allocated\n");
         }
         if( pxLink->pxNextFreeBlock != NULL )
         {
-            log_info("[ERROR]the block next not a NULL\n");
+            log_error("the block next not a NULL\n");
         }
 
         if( ( pxLink->xBlockSize & xBlockAllocatedBit ) != 0 )
@@ -224,15 +224,15 @@ void vPortFree(heap_info_t *heap, void *pv)
             }
             else
             {
-                log_info("[ERROR]next block not NULL \n");
+                log_error("next block not NULL \n");
             }
         }
         else
         {
-            log_info("[ERROR]size over max %d\n", xBlockAllocatedBit);
+            log_error("[ERROR]size over max %d\n", xBlockAllocatedBit);
         }
     }
-    log_info("free OK, addr:%p\n", pv);
+    log_debug("free OK, addr:%p\n", pv);
 }
 /*-----------------------------------------------------------*/
 

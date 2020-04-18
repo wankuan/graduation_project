@@ -14,5 +14,9 @@ typedef struct{
 }app_info_t;
 
 
+tank_status_t inner_service_init(void);
+
+tank_status_t inner_service_deinit(void);
+
 
 #endif
