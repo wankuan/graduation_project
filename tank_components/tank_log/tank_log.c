@@ -48,8 +48,12 @@ log_status_t tank_log_constructor(tank_log_t *log_handler)
 
     file_handler = &log_handler->file_handler;
     pfile = fopen(file_handler->name, "a+");
-    if(pfile==NULL_PTR)
+    if(pfile==NULL_PTR){
+        printf("[ERROR]fopen error, invalid pointor\n");
         return LOG_FAIL;
+    }
+
+
     file_handler->FILE_IO = pfile;
     return LOG_SUCCESS;
 }

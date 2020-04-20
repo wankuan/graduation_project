@@ -16,7 +16,7 @@ tank_status_t list_creat(list_head_t *handler, tank_mm_t *mm, uint16_t data_size
 
 tank_status_t list_destory(list_head_t *handler)
 {
-
+    return TANK_SUCCESS;
 }
 
 tank_status_t list_add_node(list_head_t *handler, void *data)
