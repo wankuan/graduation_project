@@ -86,6 +86,7 @@ typedef enum{
     SEND_WAIT_REQUEST,
     SEND_WAIT_ALLOCATE,
     SEND_FINISHE,
+    RECV_ACK,
     SEND_IDLE
 }send_package_state_t;
 
@@ -95,11 +96,18 @@ typedef struct{
     void *package;
     uint32_t size;
     uint32_t package_id;
-    send_package_state_t state;
+    union{
+        send_package_state_t send_state;
+        send_package_state_t recv_state;
+    };
+
 }app_package_info_t;
 
 
-
+typedef enum{
+    RECV_SYNC,
+    RECV_ASYNC
+}recv_type_t;
 
 typedef struct{
     pthread_t           pid;
@@ -117,6 +125,8 @@ typedef struct{
     ta_connect_status_t connect_status[TA_HOST_MAX];
     uint16_t            send_package_cur_index;
     list_head_t         send_package_status;
+    recv_type_t         recv_type;
+    list_head_t         recv_package_list;
     tank_mm_t           mm_handler;
     tank_msgq_t         *sender;
     tank_msgq_t         *receiver;

@@ -22,12 +22,13 @@ tank_status_t list_destory(list_head_t *handler)
 tank_status_t list_add_node(list_head_t *handler, void *data)
 {
     if(list_is_full(handler)){
-        log_error("list reach max len\n");
+        log_error("list reach max len:%d\n", handler->max_len);
         return TANK_FAIL;
     }
     list_node_t *node = tank_mm_calloc(handler->mm, handler->data_size + sizeof(void*));
     if(node == NULL){
         log_error("node allocate memory fail, heap full\n");
+        return TANK_FAIL;
     }
     node->next = NULL;
     memcpy(node->data, data, handler->data_size);

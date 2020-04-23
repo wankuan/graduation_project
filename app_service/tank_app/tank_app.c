@@ -11,7 +11,7 @@
 #include "tank_log_api.h"
 #define FILE_NAME "tank_app"
 
-#define APP_HEAP_SIZE 1024
+#define APP_HEAP_SIZE (4*1024)
 static tank_status_t app_allocate_heap(ta_info_t *ta);
 static tank_status_t app_allocate_msgq(ta_info_t *ta);
 
@@ -34,6 +34,10 @@ void *recv_fun(void *arg)
     }
 }
 
+//TODO: add recv mail check
+//TODO: add thread pool
+//
+
 
 void *send_fun(void *arg)
 {
@@ -44,8 +48,9 @@ void *send_fun(void *arg)
         app_package_info_t package_info;
         for(int i=0;i<list_get_len(&ta->send_package_status);i++){
             list_get_node(&ta->send_package_status, i, &package_info);
-            send_package_state_t state = package_info.state;
+            send_package_state_t state = package_info.send_state;
             tcp_state_t cur_state = 0;
+            log_info("dst_id is %d\n", package_info.dst_id);
             find_tcp_state(ta, package_info.dst_id, &cur_state);
             if(cur_state == ESTABLISHED){
                 if(state == SEND_WAIT_REQUEST){
@@ -107,7 +112,7 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         app_package_info_t package_info;
         for(int i=0;i<list_get_len(&ta->send_package_status);i++){
             list_get_node(&ta->send_package_status, i, &package_info);
-            send_package_state_t state = package_info.state;
+            send_package_state_t state = package_info.send_state;
             if(state == SEND_WAIT_ALLOCATE){
                 get_package_allocate(ta, i, &info);
                 break;
@@ -115,8 +120,8 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
 
             }
         }
-    }else if(info.type == APP_GET_PACKAGE_PUSH){
-        tank_id_t src_id = info.get_package_push.src_id;
+    }else if(info.type == APP_recv_package_push){
+        tank_id_t src_id = info.recv_package_push.src_id;
         if(check_ta_id_exist(ta, src_id) == TANK_FAIL){
             log_error("[%s]receiver:ID:%d invalid, check it!\n", ta->name, src_id);
             tank_app_tcp_send(ta, src_id, TCP_ID_INVALID);
@@ -127,18 +132,67 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         if(cur_state == ESTABLISHED){
 
             app_package_info_t package_info;
-            package_info.src_id = info.get_package_push.src_id;
-            package_info.dst_id = info.get_package_push.dst_id;
-            package_info.size = info.get_package_push.size;
-            package_info.package = (void*)(info.get_package_push.addr_shift +g_shm_base);
+            package_info.src_id = info.recv_package_push.src_id;
+            package_info.dst_id = info.recv_package_push.dst_id;
+            package_info.size = info.recv_package_push.size;
+            package_info.package = (void*)(info.recv_package_push.addr_shift +g_shm_base);
             log_info("[%s] 1st: get a package from src_id:%d, size:%d\n",
-                    ta->name, info.get_package_push.src_id, info.get_package_push.size);
-            ta->recv_package_cb(&package_info);
-            get_package_finished(ta, info.get_package_push.package_id);
+                    ta->name, info.recv_package_push.src_id, info.recv_package_push.size);
+
+            if(list_add_node(&ta->recv_package_list, &package_info)==TANK_FAIL){
+                //return TANK_FAIL;
+            }
+            log_info("[%s] 2st: has written into buffer\n",
+                    ta->name);
+            if(ta->recv_type == RECV_ASYNC){
+                if(list_is_full(&ta->recv_package_list)==TANK_SUCCESS){
+                    while(list_is_empty(&ta->recv_package_list)==TANK_FAIL){
+                        app_package_info_t recv_package_info;
+                        list_get_node(&ta->recv_package_list, 0, &recv_package_info);
+                        uint32_t num;
+                        memcpy(&num, recv_package_info.package, recv_package_info.size);
+                        log_info("[inner output]=======get a messgae from src_id:%d, size:%d, info:%d=======\n",
+                                recv_package_info.src_id, recv_package_info.size, num);
+                        list_delete_node(&ta->recv_package_list, 0);
+                    }
+                }
+                log_info("[%s]RECV ASYNC, clientto check\n", ta->name);
+
+            }else if(ta->recv_type == RECV_SYNC){
+                ta->recv_package_cb(&package_info);
+
+                app_request_info_t app_info;
+                memset(&app_info, 0, TANK_MSGQ_NORMAL_SIZE);
+                app_info.type = APP_READ_PACKAGE_FINISHED;
+                app_info.recv_package_finished.package_id = package_info.package_id;
+
+                if(tank_msgq_send(ta->sender, &app_info, TANK_MSG_NORMAL_SIZE) == TANK_FAIL){
+                    log_error("[%s] send recv_package_finished error\n");
+                }
+                list_delete_node(&ta->recv_package_list, 0);
+                log_info("[%s]RECV SYNC, callback\n", ta->name);
+            }else{
+                log_error("[%s] the handler recv type error\n", ta->name);
+            }
+            recv_package_ack(ta, info.recv_package_push.package_id);
         }else{
             log_warn("[%s]receiver: ID:%d TCP-state not established\n", ta->name, src_id);
         }
-    }else if(info.type == HEART_BEAT){
+    }else if(info.type == APP_GET_PACKAGE_ACK){
+        app_package_info_t package_info;
+        int index = 0;
+        for(index=0;index<list_get_len(&ta->send_package_status);index++){
+            list_get_node(&ta->send_package_status, index, &package_info);
+            if(package_info.package_id == info.recv_package_ack.package_id){
+                break;
+            }
+        }
+        package_info.send_state = SEND_IDLE;
+        list_rewrite_node(&ta->send_package_status, index, &package_info);
+        list_delete_node(&ta->send_package_status, index);
+        log_info("[%s]get the package ack successful\n", ta->name);
+    }
+    else if(info.type == HEART_BEAT){
         app_request_info_t beat_info;
         memset(&beat_info, 0, sizeof(app_request_info_t));
             beat_info.type = HEART_BEAT;
@@ -156,9 +210,9 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
 
 tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, uint16_t *size, uint16_t oversize)
 {
-    app_get_package_push_t info;
-    memset(&info, 0, sizeof(app_get_package_push_t));
-    tank_msgq_recv_wait(ta->recv_package, &info, sizeof(app_get_package_push_t));
+    app_recv_package_push_t info;
+    memset(&info, 0, sizeof(app_recv_package_push_t));
+    tank_msgq_recv_wait(ta->recv_package, &info, sizeof(app_recv_package_push_t));
     *size = info.size;
     *src_id = info.src_id;
     if(*size > oversize){
@@ -167,7 +221,7 @@ tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, u
         memcpy(packgae, (void*)(info.addr_shift+g_shm_base), *size);
     }
     log_info("[%s][recv_package_msgq]get a package from src_id:%d, size:%d\n", ta->name, *src_id, *size);
-    get_package_finished(ta, info.package_id);
+    recv_package_ack(ta, info.package_id);
     return TANK_SUCCESS;
 }
 
@@ -235,15 +289,17 @@ tank_status_t tank_app_recv_cb_register(ta_info_t *ta, tank_status_t (*cb)(app_p
 
 __weak tank_status_t tank_app_recv_package_callback(app_package_info_t* info)
 {
+
     log_warn("recv callback function not defined\n");
     return TANK_SUCCESS;
 }
-tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type)
+tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type, recv_type_t recv_type)
 {
     log_info("============ app init start ===========\n");
     memset(ta, 0, sizeof(ta_info_t));
     pthread_mutex_init(&ta->thread_mutex, NULL);
     my_sem_creat(&ta->thread_sem, 0);
+    ta->recv_type = recv_type;
     ta->recv_thread = recv_fun;
     ta->send_thread = send_fun;
 
@@ -257,6 +313,7 @@ tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol
     app_allocate_heap(ta);
     app_allocate_msgq(ta);
     list_creat(&ta->send_package_status, &ta->mm_handler, sizeof(app_package_info_t), 20);
+    list_creat(&ta->recv_package_list, &ta->mm_handler, sizeof(app_package_info_t), 5);
     pthread_create(&ta->pid, NULL, ta->recv_thread, ta);
     pthread_create(&ta->pid, NULL, ta->send_thread, ta);
     log_info("============ app init OK ===========\n");
@@ -277,8 +334,11 @@ tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package, ui
     info.dst_id = dst_id;
     info.package = package;
     info.size = size;
-    info.state = SEND_WAIT_REQUEST;
-
+    info.send_state = SEND_WAIT_REQUEST;
+    if(check_ta_id_exist(ta, dst_id) ==  TANK_FAIL){
+        log_info("[%s]dst_id:%d not creat, creat it!\n", ta->name, dst_id);
+        tank_app_listen(ta, dst_id);
+    }
     if(list_add_node(&ta->send_package_status, &info) == TANK_FAIL){
         log_error("[%s]ta_send_package into buffer error, list is full!\n");
         return TANK_FAIL;
@@ -304,7 +364,7 @@ tank_status_t send_package_request(ta_info_t *ta, uint16_t index)
         log_error("[%s][send_package_request]send error\n", ta->name);
         return TANK_FAIL;
     }
-    package_info.state = SEND_WAIT_ALLOCATE;
+    package_info.send_state = SEND_WAIT_ALLOCATE;
     list_rewrite_node(&ta->send_package_status, index, &package_info);
     log_info("[%s] 1st: send_package_request, src_id:%d, dst_id:%d, size:%d\n",
             ta->name, info.send_package_request.src_id, info.send_package_request.dst_id, info.send_package_request.size
@@ -316,16 +376,16 @@ tank_status_t get_package_allocate(ta_info_t *ta, uint16_t index, app_request_in
     addr_t addr = 0;
     app_package_info_t package_info;
     list_get_node(&ta->send_package_status, index, &package_info);
-    if(info->send_package_allocate.dst_id == ta->id){
-        addr = info->send_package_allocate.addr_shift + g_shm_base;
-        package_info.package_id = info->send_package_allocate.package_id;
+    if(info->recv_package_allocate.dst_id == ta->id){
+        addr = info->recv_package_allocate.addr_shift + g_shm_base;
+        package_info.package_id = info->recv_package_allocate.package_id;
     }else{
-        log_info("[%s][get_package_allocate]recv id is error, get_package_allocate dst id %d\n", ta->name, info->send_package_allocate.dst_id);
+        log_info("[%s][get_package_allocate]recv id is error, get_package_allocate dst id %d\n", ta->name, info->recv_package_allocate.dst_id);
         return TANK_FAIL;
     }
-    log_info("[%s] 2nd: get package allocate info, package_id:%d shift:%d\n", ta->name, package_info.package_id, info->send_package_allocate.addr_shift);
+    log_info("[%s] 2nd: get package allocate info, package_id:%d shift:%d\n", ta->name, package_info.package_id, info->recv_package_allocate.addr_shift);
     memcpy((void*)addr, package_info.package, package_info.size);
-    package_info.state = SEND_FINISHE;
+    package_info.send_state = SEND_FINISHE;
     list_rewrite_node(&ta->send_package_status, index, &package_info);
     return TANK_SUCCESS;
 }
@@ -337,34 +397,36 @@ tank_status_t send_package_finished(ta_info_t *ta, uint16_t index)
     list_get_node(&ta->send_package_status, index, &package_info);
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     info.type = APP_SEND_PACKAGE_FINISHED;
-    info.send_package_finshed.package_id = package_info.package_id;
+    info.send_package_finished.package_id = package_info.package_id;
     send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
     if(send_status == TANK_FAIL){
         log_error("[%s][send_package_finished ACK]send error\n", ta->name);
         return TANK_FAIL;
     }
-    package_info.state = SEND_IDLE;
-    list_delete_node(&ta->send_package_status, index);
+    package_info.send_state = RECV_ACK;
+    list_rewrite_node(&ta->send_package_status, index, &package_info);
+    // package_info.state = SEND_IDLE;
+    // list_delete_node(&ta->send_package_status, index);
     // list_rewrite_node(&ta->send_package_status, index, &package_info);
 
     log_info("[%s] 3rd: send package finished, ACK, package_id:%d\n",
-            ta->name, info.send_package_finshed.package_id
+            ta->name, info.send_package_finished.package_id
             );
     return TANK_SUCCESS;
 }
-tank_status_t get_package_finished(ta_info_t *ta, uint32_t package_id)
+tank_status_t recv_package_ack(ta_info_t *ta, uint32_t package_id)
 {
     app_request_info_t info;
     tank_status_t send_status = 0;
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     info.type = APP_GET_PACKAGE_ACK;
-    info.get_package_finished.package_id = package_id;
+    info.recv_package_ack.package_id = package_id;
     send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
     if(send_status == TANK_FAIL){
-        log_error("[%s][get_package_finished]send error\n", ta->name);
+        log_error("[%s][recv_package_ack]send error\n", ta->name);
     }
     log_info("[%s] 2nd: send a ACK, package_id:%d\n",
-            ta->name, info.send_package_finshed.package_id
+            ta->name, info.send_package_finished.package_id
             );
     return TANK_SUCCESS;
 }
@@ -378,15 +440,15 @@ tank_status_t tank_app_recv_package_wait(ta_info_t *ta, tank_id_t *src_id, void 
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     tank_msgq_recv_wait(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE);
 
-    if(info.type == APP_GET_PACKAGE_PUSH){
-        if(info.get_package_push.dst_id == ta->id){
-            *src_id = info.get_package_push.src_id;
-            package_id = info.get_package_push.package_id;
-            *size = info.get_package_push.size;
-            addr_shift = info.get_package_push.addr_shift;
-            addr = info.get_package_push.addr_shift + g_shm_base;
+    if(info.type == APP_recv_package_push){
+        if(info.recv_package_push.dst_id == ta->id){
+            *src_id = info.recv_package_push.src_id;
+            package_id = info.recv_package_push.package_id;
+            *size = info.recv_package_push.size;
+            addr_shift = info.recv_package_push.addr_shift;
+            addr = info.recv_package_push.addr_shift + g_shm_base;
         }else{
-            log_info("[%s]recv id is error, tank_app_recv_package_wait dst id %d\n", ta->name, info.get_package_push.dst_id);
+            log_info("[%s]recv id is error, tank_app_recv_package_wait dst id %d\n", ta->name, info.recv_package_push.dst_id);
             return TANK_FAIL;
         }
     }else{
@@ -400,9 +462,9 @@ tank_status_t tank_app_recv_package_wait(ta_info_t *ta, tank_id_t *src_id, void 
 
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     info.type = APP_GET_PACKAGE_ACK;
-    info.get_package_finished.package_id = package_id;
+    info.recv_package_ack.package_id = package_id;
     tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
-    log_info("[%s]get_package_finished, package_id:%d\n", ta->name, package_id);
+    log_info("[%s]recv_package_ack, package_id:%d\n", ta->name, package_id);
     return TANK_SUCCESS;
 }
 
@@ -485,12 +547,12 @@ static tank_status_t app_allocate_msgq(ta_info_t *ta)
     tank_msgq_creat(ta->receiver, TANK_MSGQ_NORMAL_SIZE, TANK_MSGQ_NORMAL_LEN);
     log_info("[%s]receiver msgq addr:%p\n", ta->name, ta->receiver);
 
-    mm_size = sizeof(tank_msgq_t) + 10*sizeof(app_get_package_push_t);
+    mm_size = sizeof(tank_msgq_t) + 10*sizeof(app_recv_package_push_t);
     ta->recv_package = (tank_msgq_t*)tank_mm_malloc(&ta->mm_handler, mm_size);
     if(ta->recv_package == NULL){
         log_error("ta->recv_package allocate memory fail, heap full\n");
     }
-    tank_msgq_creat(ta->recv_package, sizeof(app_get_package_push_t), 10);
+    tank_msgq_creat(ta->recv_package, sizeof(app_recv_package_push_t), 10);
     log_info("[%s]recv_package msgq addr:%p\n", ta->name, ta->recv_package);
 
     ta->sender = g_service_msgq;

@@ -15,7 +15,7 @@
 #define HEART_BEAT_TIME         1
 #define HEART_BEAT_LOST_TIME    2
 
-
+//TODD:短消息带ACK才行
 // APP所有信息的对应表
 app_info_t               app_info_table[256];
 // 当前系统占用的ID数
@@ -148,11 +148,13 @@ void *hear_beat_send_thread(void *arg)
             info.type = HEART_BEAT;
             info.heart_beat.src_id = 0;
             info.heart_beat.value = 0;
-            tank_msgq_send((tank_msgq_t*)app_info_table[i].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
+
             time_t cur_time;
             get_cur_time(&cur_time);
-            if((cur_time - app_info_table[i].last_refresh)>=HEART_BEAT_LOST_TIME){
+            if((cur_time - app_info_table[i].last_refresh) >= HEART_BEAT_LOST_TIME){
                 log_error("app_id:%d has no response\n", app_info_table[i].id);
+            }else{
+                tank_msgq_send((tank_msgq_t*)app_info_table[i].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
             }
         }
         sleep(HEART_BEAT_TIME);
@@ -246,16 +248,16 @@ void *handler_thread(void *arg)
             log_info("package: 2nd allocate\n");
             index =  find_id_index(app_package_info[g_app_package_seq].src_id);
             info.type = APP_GET_PACKAGE_ALLOCATE;
-            info.send_package_allocate.addr_shift = add_shift;
-            info.send_package_allocate.dst_id = app_package_info[g_app_package_seq].src_id;
-            info.send_package_allocate.package_id = app_package_info[g_app_package_seq].package_id;
+            info.recv_package_allocate.addr_shift = add_shift;
+            info.recv_package_allocate.dst_id = app_package_info[g_app_package_seq].src_id;
+            info.recv_package_allocate.package_id = app_package_info[g_app_package_seq].package_id;
             tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
 
             g_app_package_seq += 1;
             g_package_id += 1;
         }else if(info.type == APP_SEND_PACKAGE_FINISHED){
             log_info("package: 3rd get sender finished ACK\n");
-            uint32_t package_id = info.send_package_finshed.package_id;
+            uint32_t package_id = info.send_package_finished.package_id;
             app_package_t  *package_info = find_package_info(package_id);
             package_info->state = RESTRANSIMTING;
             if(package_info == NULL){
@@ -264,30 +266,36 @@ void *handler_thread(void *arg)
             }
 
             memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
-            info.type = APP_GET_PACKAGE_PUSH;
-            info.get_package_push.src_id = package_info->src_id;
-            info.get_package_push.dst_id = package_info->dst_id;
-            info.get_package_push.package_id = package_info->package_id;
-            info.get_package_push.addr_shift = package_info->addr_shift;
-            info.get_package_push.size = package_info->size;
-            tank_id_t index =  find_id_index(info.get_package_push.dst_id);
+            info.type = APP_recv_package_push;
+            info.recv_package_push.src_id = package_info->src_id;
+            info.recv_package_push.dst_id = package_info->dst_id;
+            info.recv_package_push.package_id = package_info->package_id;
+            info.recv_package_push.addr_shift = package_info->addr_shift;
+            info.recv_package_push.size = package_info->size;
+            tank_id_t index =  find_id_index(info.recv_package_push.dst_id);
             if(tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE) == TANK_FAIL){
                 log_error("package: 4th restransmit error\n");
                 continue;
             }
             log_info("package: 4th restransmit package\n");
             log_info("src_id:%d, dst_id:%d, package_id:%d\n",
-                        info.get_package_push.src_id,
-                        info.get_package_push.dst_id,
-                        info.get_package_push.package_id);
+                        info.recv_package_push.src_id,
+                        info.recv_package_push.dst_id,
+                        info.recv_package_push.package_id);
 
         }else if(info.type == APP_GET_PACKAGE_ACK){
             log_info("package: 5th get recevier finished ACK\n");
-            uint32_t package_id = info.get_package_finished.package_id;
+            uint32_t package_id = info.recv_package_ack.package_id;
             app_package_t  *package_info = find_package_info(package_id);
             package_info->state = FINISHED;
             if(package_info == NULL){
                 log_error("can not find package_id:%d\n", package_id);
+                continue;
+            }
+            //TODO: add info printf
+            tank_id_t index =  find_id_index(package_info->src_id);
+            if(tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE) == TANK_FAIL){
+                log_error("package: 4th restransmit error\n");
                 continue;
             }
             // tank_mm_free(&g_inner_service_mm, (void*)(package_info->addr_shift + g_shm_base));
@@ -300,8 +308,17 @@ void *handler_thread(void *arg)
             }
             get_cur_time(&app_info_table[index].last_refresh);
             log_debug("heart beat ACK, src_id:%d\n", info.heart_beat.src_id);
-        }
-        else{
+        }else if(info.type == APP_READ_PACKAGE_FINISHED){
+            log_info("package: 6th read package finished ACK\n");
+            uint32_t package_id = info.recv_package_finished.package_id;
+            app_package_t  *package_info = find_package_info(package_id);
+            if(package_info == NULL){
+                log_error("can not find package_id:%d\n", package_id);
+                continue;
+            }
+            tank_mm_free(&g_inner_service_mm, (void*)(package_info->addr_shift + g_shm_base));
+            log_info("=====package: 6th read package finished ACK exit======\n");
+        }else{
             log_error("inner_service get a error msg type, %d\n", info.type);
         }
     }

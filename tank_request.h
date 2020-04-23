@@ -50,17 +50,21 @@ typedef struct{
     tank_id_t dst_id;
     tank_id_t package_id;
     addr_shift_t addr_shift;
-}app_get_package_allocate_t;
+}app_recv_package_allocate_t;
 
 typedef struct{
     tank_id_t package_id;
 }app_send_package_finished_t;
 
-typedef app_package_t app_get_package_push_t;
+typedef app_package_t app_recv_package_push_t;
 
 typedef struct{
     tank_id_t package_id;
-}app_get_package_finsihed_t;
+}app_recv_package_ack_t;
+
+typedef struct{
+    tank_id_t package_id;
+}app_recv_package_finished_t;
 
 typedef enum{
     MM_ALLOCATE = 0,
@@ -72,8 +76,9 @@ typedef enum{
     APP_GET_PACKAGE_ALLOCATE,
     APP_SEND_PACKAGE_FINISHED,
 
-    APP_GET_PACKAGE_PUSH,
+    APP_recv_package_push,
     APP_GET_PACKAGE_ACK,
+    APP_READ_PACKAGE_FINISHED,
     PUSH_ERROR
 }app_request_type_t;
 
@@ -111,11 +116,12 @@ typedef struct{
         app_send_msg_t msg;
 
         app_send_package_request_t send_package_request;
-        app_get_package_allocate_t send_package_allocate;
-        app_send_package_finished_t send_package_finshed;
+        app_recv_package_allocate_t recv_package_allocate;
+        app_send_package_finished_t send_package_finished;
 
-        app_get_package_push_t get_package_push;
-        app_get_package_finsihed_t get_package_finished;
+        app_recv_package_push_t recv_package_push;
+        app_recv_package_ack_t recv_package_ack;
+        app_recv_package_finished_t recv_package_finished;
     };
 }app_request_info_t;
 

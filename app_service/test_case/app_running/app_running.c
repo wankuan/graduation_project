@@ -7,6 +7,8 @@
 #include <pthread.h>
 #include "tank_log.h"
 #include "tank_delay.h"
+#include "tank_app_api.h"
+
 
 ta_info_t app_demo;
 ta_info_t app_demo2;
@@ -34,9 +36,9 @@ tank_status_t tank_app_recv_package_callback(app_package_info_t* info)
     memcpy(&num, info->package, info->size);
     log_info("=======get a messgae from src_id:%d, size:%d, info:%d=======\n",
             info->src_id, info->size, num);
-    if(info->src_id == 3){
+    if(info->src_id == 4){
         log_info("============send a msg num:%d============\n", num);
-        ta_send_package(&app_demo, info->src_id, &num, sizeof(num), 0);
+        ta_send_package(&app_demo2, info->src_id, &num, sizeof(num), 0);
     }
 
     return TANK_SUCCESS;
@@ -58,7 +60,7 @@ int main(int argc, char *argv[])
                     );
             log_info("========logger start===========\n");
             log_info("sender\n");
-            tank_app_creat(&app_demo, src_id, 0, 0);
+            tank_app_creat(&app_demo, src_id, 0, 0, RECV_SYNC);
             // for(int i=0;i<10;++i){
             //     if(i != app_demo.id){
             //         tank_app_listen(&app_demo, i);
@@ -79,8 +81,8 @@ int main(int argc, char *argv[])
                     PORT_FILE|PORT_SHELL
                     );
             log_info("========logger start===========\n");
-            tank_app_creat(&app_demo, src_id, 0, 0);
-            tank_app_creat(&app_demo2, 2, 0, 0);
+            tank_app_creat(&app_demo, src_id, 0, 0, RECV_ASYNC);
+            tank_app_creat(&app_demo2, 2, 0, 0, RECV_SYNC);
             for(int i=0;i<10;++i){
                 if(i != app_demo.id){
                     tank_app_listen(&app_demo, i);

@@ -18,7 +18,7 @@ tank_status_t find_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t *state);
 tank_status_t write_tcp_state(ta_info_t *ta, tank_id_t id, tcp_state_t state);
 
 
-tank_status_t tank_app_creat(ta_info_t *ta, tank_id_t id, ta_protocol_t protocol, ta_type_t type);
+
 
 
 tank_status_t tank_app_destory(ta_info_t *ta);
@@ -36,10 +36,6 @@ tank_status_t send_package_request(ta_info_t *ta, uint16_t index);
 tank_status_t get_package_allocate(ta_info_t *ta, uint16_t index, app_request_info_t *info);
 tank_status_t send_package_finished(ta_info_t *ta, uint16_t index);
 
-tank_status_t get_package_finished(ta_info_t *ta, uint32_t package_id);
-
-
-tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package, uint32_t size, uint32_t tiemout);
-tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, uint16_t *size, uint16_t oversize);
+tank_status_t recv_package_ack(ta_info_t *ta, uint32_t package_id);
 
 #endif
