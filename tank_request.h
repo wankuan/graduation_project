@@ -67,7 +67,7 @@ typedef struct{
 }app_recv_package_finished_t;
 
 typedef enum{
-    MM_ALLOCATE = 0,
+    MM_ALLOCATE = 2,
     MM_FREE,
     HEART_BEAT,
     APP_PUSH_MSGQ_ADDR,

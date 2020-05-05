@@ -80,25 +80,25 @@ log_status_t tank_log_write(tank_log_t *log_handler, const char *app, const char
     if(log_info&LOG_INFO_TIME){
         uint8_t time_buffer[LOG_INFO_TIME_WIDTH];
         get_current_time_str(time_buffer);
-        snprintf(&log_buffer[write_len], LOG_INFO_TIME_WIDTH, "[%s]",time_buffer);
+        snprintf(&log_buffer[write_len], LOG_INFO_TIME_WIDTH+3, "[%s]",time_buffer);
         write_len = strlen(log_buffer);
     }
     if(log_info&LOG_INFO_LEVEL){
         char level_str_buffer[LOG_INFO_LEVEL_WIDTH];
         get_log_level_str(level, level_str_buffer);
-        snprintf(&log_buffer[write_len], LOG_INFO_LEVEL_WIDTH, "[%s]",level_str_buffer);
+        snprintf(&log_buffer[write_len], LOG_INFO_LEVEL_WIDTH+3, "[%s]",level_str_buffer);
         write_len = strlen(log_buffer);
     }
     if(log_info&LOG_INFO_OUTAPP){
-        snprintf(&log_buffer[write_len], LOG_INFO_APP_WIDTH, "[%s]",app);
+        snprintf(&log_buffer[write_len], LOG_INFO_APP_WIDTH+3, "[%s]",app);
         write_len = strlen(log_buffer);
     }
     if(log_info&LOG_INFO_FILE){
-        snprintf(&log_buffer[write_len], LOG_INFO_FILE_WIDTH, "[%s]",filename);
+        snprintf(&log_buffer[write_len], LOG_INFO_FILE_WIDTH+3, "[%s]",filename);
         write_len = strlen(log_buffer);
     }
     if(log_info&LOG_INFO_FUNC){
-        snprintf(&log_buffer[write_len], LOG_INFO_FUN_WIDTH, "[%s]",fun);
+        snprintf(&log_buffer[write_len], LOG_INFO_FUN_WIDTH+3, "[%s]",fun);
         write_len = strlen(log_buffer);
     }
 

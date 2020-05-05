@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include "tank_request.h"
 #include "inner_service.h"
-
+#include "tank_delay.h"
 
 
 #include "tank_log_api.h"
@@ -144,7 +144,7 @@ void *hear_beat_send_thread(void *arg)
     app_request_info_t info;
     while(1){
         for(int i=0;i<g_app_id_cur_size;++i){
-            memset(&info, 0, sizeof(app_request_info_t));
+            memset(&info, 0, TANK_MSG_NORMAL_SIZE);
             info.type = HEART_BEAT;
             info.heart_beat.src_id = 0;
             info.heart_beat.value = 0;
@@ -156,8 +156,9 @@ void *hear_beat_send_thread(void *arg)
             }else{
                 tank_msgq_send((tank_msgq_t*)app_info_table[i].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE);
             }
+            sleep_ms(5);
         }
-        sleep(HEART_BEAT_TIME);
+        sleep_ms(HEART_BEAT_TIME*100);
     }
 }
 

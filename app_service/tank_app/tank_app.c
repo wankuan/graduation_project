@@ -194,12 +194,14 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
     }
     else if(info.type == HEART_BEAT){
         app_request_info_t beat_info;
-        memset(&beat_info, 0, sizeof(app_request_info_t));
-            beat_info.type = HEART_BEAT;
-            beat_info.heart_beat.src_id = ta->id;
-            beat_info.heart_beat.value = info.heart_beat.value + 1;
-            tank_msgq_send(ta->sender, &beat_info, TANK_MSG_NORMAL_SIZE);
-            log_debug("[%s]send the heart beat response\n", ta->name);
+        memset(&beat_info, 0, TANK_MSG_NORMAL_SIZE);
+        beat_info.type = HEART_BEAT;
+        beat_info.heart_beat.src_id = ta->id;
+        beat_info.heart_beat.value = info.heart_beat.value + 1;
+        int val = 0;
+        my_sem_get_val(&ta->sender->sem_cur_len, &val);
+        tank_msgq_send(ta->sender, &beat_info, TANK_MSG_NORMAL_SIZE);
+        log_debug("[%s]send the heart beat response\n", ta->name);
     }
     else{
         log_info("[%s]msg type is error\n", ta->name);
@@ -359,16 +361,17 @@ tank_status_t send_package_request(ta_info_t *ta, uint16_t index)
     info.send_package_request.src_id = package_info.src_id;
     info.send_package_request.dst_id = package_info.dst_id;
     info.send_package_request.size = package_info.size;
-    send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
-    if(send_status == TANK_FAIL){
-        log_error("[%s][send_package_request]send error\n", ta->name);
-        return TANK_FAIL;
-    }
+
     package_info.send_state = SEND_WAIT_ALLOCATE;
     list_rewrite_node(&ta->send_package_status, index, &package_info);
     log_info("[%s] 1st: send_package_request, src_id:%d, dst_id:%d, size:%d\n",
             ta->name, info.send_package_request.src_id, info.send_package_request.dst_id, info.send_package_request.size
             );
+    send_status = tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
+    if(send_status == TANK_FAIL){
+        log_error("[%s][send_package_request]send error\n", ta->name);
+        return TANK_FAIL;
+    }
     return TANK_SUCCESS;
 }
 tank_status_t get_package_allocate(ta_info_t *ta, uint16_t index, app_request_info_t *info)
@@ -486,30 +489,30 @@ tank_status_t tank_app_tcp_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag
     return TANK_SUCCESS;
 }
 
-tank_status_t tank_app_recv_msg(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag)
-{
-    app_request_info_t info;
-    memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
-    if(tank_msgq_recv(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE) == TANK_FAIL){
-        return TANK_FAIL;
-    }
-    if(info.type == APP_TCP_MSG){
-        if(info.msg.dst_id == ta->id){
-            *flag = info.msg.flag;
-            *src_id = info.msg.src_id;
-        }else{
-            log_info("[%s]recv id is error, msg dst id %d\n", ta->name, info.msg.dst_id);
-            return TANK_FAIL;
-        }
-    }else{
-        log_info("[%s]recv type is error\n", ta->name);
-        return TANK_FAIL;
-    }
-    log_info("[%s]recv a msg, src_id:%d, dst_id:%d, flag:%d\n",
-            ta->name, *src_id, ta->id, *flag
-            );
-    return TANK_SUCCESS;
-}
+// tank_status_t tank_app_recv_msg(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag)
+// {
+//     app_request_info_t info;
+//     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
+//     if(tank_msgq_recv(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE) == TANK_FAIL){
+//         return TANK_FAIL;
+//     }
+//     if(info.type == APP_TCP_MSG){
+//         if(info.msg.dst_id == ta->id){
+//             *flag = info.msg.flag;
+//             *src_id = info.msg.src_id;
+//         }else{
+//             log_info("[%s]recv id is error, msg dst id %d\n", ta->name, info.msg.dst_id);
+//             return TANK_FAIL;
+//         }
+//     }else{
+//         log_info("[%s]recv type is error\n", ta->name);
+//         return TANK_FAIL;
+//     }
+//     log_info("[%s]recv a msg, src_id:%d, dst_id:%d, flag:%d\n",
+//             ta->name, *src_id, ta->id, *flag
+//             );
+//     return TANK_SUCCESS;
+// }
 
 
 tank_status_t tank_app_recv_msg_wait(ta_info_t *ta, tank_id_t *src_id, tcp_header_flag_t *flag)
