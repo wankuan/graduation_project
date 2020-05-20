@@ -1,6 +1,11 @@
 #include "tank_log_api.h"
+#include <unistd.h>
 #include <sys/time.h>
+// #include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
 #include <time.h>
+
 tank_log_t mylog;
 
 static log_status_t get_current_time_str(char *p_timer)
@@ -25,8 +30,21 @@ tank_status_t tank_log_init(tank_log_t *log_handler, char *filename, uint32_t si
     log_handler->info_handler.port = port;
     log_handler->info_handler.level = level;
     char time[32];
+    char exec_path[256] = {0};
+    char log_path[256] = {0};
     get_current_time_str(time);
-    snprintf(log_handler->file_handler.name, 256, "/home/wankuan/my_workspace/graduation_project/log/%s_%s.log",filename, time);
+
+    if(getcwd(exec_path, 256) == NULL ){
+        printf("[ERROR]get the exec dir fail\n");
+        return TANK_FAIL;
+    }
+    printf("the exec dir is %s\n", exec_path);
+    snprintf(log_path, 256, "%s/log", exec_path);
+    if(opendir(log_path) == NULL){
+        printf("[INFO]the log dir not exist, creat it\n");
+        mkdir(log_path, 0755);
+    }
+    snprintf(log_handler->file_handler.name, 256, "%s/%s_%s.log",log_path, filename, time);
     status = tank_log_constructor(log_handler);
     if (status != LOG_SUCCESS){
         return TANK_FAIL;

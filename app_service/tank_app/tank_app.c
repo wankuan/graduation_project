@@ -58,7 +58,6 @@ void *send_fun(void *arg)
                 }else if(state == SEND_FINISHE){
                     send_package_finished(ta, i);
                 }else{
-
                 }
             }else if(cur_state == SYN_SENT){
                 log_info("TCP is SYN_SENT\n");
@@ -85,8 +84,8 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         tcp_state_t next_state = 0;
         tcp_header_flag_t recv_flag = 0;
         tcp_header_flag_t send_flag = 0;
-        recv_flag = info.msg.flag;
-        src_id = info.msg.src_id;
+        recv_flag = info.tcp_state.flag;
+        src_id = info.tcp_state.src_id;
 
         tank_status_t (*fsm_action)(void *) = NULL;
 
@@ -156,8 +155,7 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
                         list_delete_node(&ta->recv_package_list, 0);
                     }
                 }
-                log_info("[%s]RECV ASYNC, clientto check\n", ta->name);
-
+                log_info("[%s]RECV ASYNC, client to check\n", ta->name);
             }else if(ta->recv_type == RECV_SYNC){
                 ta->recv_package_cb(&package_info);
 
@@ -207,23 +205,6 @@ tank_status_t tank_app_recv_all(ta_info_t *ta)
         log_info("[%s]msg type is error\n", ta->name);
         return TANK_FAIL;
     }
-    return TANK_SUCCESS;
-}
-
-tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, uint16_t *size, uint16_t oversize)
-{
-    app_recv_package_push_t info;
-    memset(&info, 0, sizeof(app_recv_package_push_t));
-    tank_msgq_recv_wait(ta->recv_package, &info, sizeof(app_recv_package_push_t));
-    *size = info.size;
-    *src_id = info.src_id;
-    if(*size > oversize){
-        memcpy(packgae, (void*)(info.addr_shift+g_shm_base), oversize);
-    }else{
-        memcpy(packgae, (void*)(info.addr_shift+g_shm_base), *size);
-    }
-    log_info("[%s][recv_package_msgq]get a package from src_id:%d, size:%d\n", ta->name, *src_id, *size);
-    recv_package_ack(ta, info.package_id);
     return TANK_SUCCESS;
 }
 
@@ -479,9 +460,9 @@ tank_status_t tank_app_tcp_send(ta_info_t *ta, tank_id_t dst_id, tcp_header_flag
     }
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     info.type = APP_TCP_MSG;
-    info.msg.src_id = ta->id;
-    info.msg.dst_id = dst_id;
-    info.msg.flag = flag;
+    info.tcp_state.src_id = ta->id;
+    info.tcp_state.dst_id = dst_id;
+    info.tcp_state.flag = flag;
     tank_msgq_send(ta->sender, &info, TANK_MSGQ_NORMAL_SIZE);
     log_info("[%s][TCP]send a msg, src_id:%d, dst_id:%d, flag:%d\n",
             ta->name, ta->id, dst_id, flag
@@ -521,11 +502,11 @@ tank_status_t tank_app_recv_msg_wait(ta_info_t *ta, tank_id_t *src_id, tcp_heade
     memset(&info, 0, TANK_MSGQ_NORMAL_SIZE);
     tank_msgq_recv_wait(ta->receiver, &info, TANK_MSGQ_NORMAL_SIZE);
     if(info.type == APP_TCP_MSG){
-        if(info.msg.dst_id == ta->id){
-            *flag = info.msg.flag;
-            *src_id = info.msg.src_id;
+        if(info.tcp_state.dst_id == ta->id){
+            *flag = info.tcp_state.flag;
+            *src_id = info.tcp_state.src_id;
         }else{
-            log_info("[%s]recv id is error, msg dst id %d\n", ta->name, info.msg.dst_id);
+            log_info("[%s]recv id is error, msg dst id %d\n", ta->name, info.tcp_state.dst_id);
             return TANK_FAIL;
         }
     }else{
@@ -549,14 +530,6 @@ static tank_status_t app_allocate_msgq(ta_info_t *ta)
     }
     tank_msgq_creat(ta->receiver, TANK_MSGQ_NORMAL_SIZE, TANK_MSGQ_NORMAL_LEN);
     log_info("[%s]receiver msgq addr:%p\n", ta->name, ta->receiver);
-
-    mm_size = sizeof(tank_msgq_t) + 10*sizeof(app_recv_package_push_t);
-    ta->recv_package = (tank_msgq_t*)tank_mm_malloc(&ta->mm_handler, mm_size);
-    if(ta->recv_package == NULL){
-        log_error("ta->recv_package allocate memory fail, heap full\n");
-    }
-    tank_msgq_creat(ta->recv_package, sizeof(app_recv_package_push_t), 10);
-    log_info("[%s]recv_package msgq addr:%p\n", ta->name, ta->recv_package);
 
     ta->sender = g_service_msgq;
     log_info("[%s]sender msgq addr:%p\n", ta->name, ta->sender);

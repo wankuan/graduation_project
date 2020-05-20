@@ -18,6 +18,11 @@
 typedef uint16_t tank_queue_id_t;
 typedef uint16_t tank_id_t;
 
+#define SYS_ID_MASK (0x0100)
+#define APP_ID_MASK (0x00FF)
+#define GET_APP_ID(id) (id&APP_ID_MASK)
+#define GET_SYS_ID(id) (id&SYS_ID_MASK)
+
 typedef enum{
     TANK_SUCCESS = 1,
     TANK_FAIL = 0

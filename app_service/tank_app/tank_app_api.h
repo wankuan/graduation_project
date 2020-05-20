@@ -13,3 +13,21 @@ tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package, ui
 tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae, uint16_t *size, uint16_t oversize);
 
 #endif
+
+
+// typedef pority_t int;
+
+
+// tank_status_t ta_send_package(ta_info_t *ta, tank_id_t dst_id, void *package,
+// pority_t pority, uint32_t size, uint32_t tiemout);
+// tank_status_t ta_recv_package(ta_info_t *ta, tank_id_t *src_id, void* packgae,
+// uint16_t *size, uint16_t oversize);
+
+
+// typedef enum{
+//     NO_SYSTEM_ID,
+//     NO_PHY_LINK,
+//     NO_ACK,
+//     SEND_TIME_OUT,
+//     RECV_TIME_OUT
+// }tank_msg_error_t;

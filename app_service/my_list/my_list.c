@@ -39,6 +39,7 @@ tank_status_t list_add_node(list_head_t *handler, void *data)
         last_node->next = node;
     }
     handler->cur_len += 1;
+    log_debug("node add, cur len:%d\n", handler->cur_len);
     return TANK_SUCCESS;
 }
 tank_status_t list_rewrite_node(list_head_t *handler, uint16_t index, void *nex_data)

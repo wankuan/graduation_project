@@ -93,7 +93,7 @@ tank_status_t inner_service_deinit(void)
     pthread_join(g_service_pid,NULL);
     return TANK_SUCCESS;
 }
-
+/*kill */
 static tank_status_t app_malloc_init(void)
 {
     g_push_heap_t = (inner_service_push_heap_t *)SEM_ADDR;
@@ -148,7 +148,6 @@ void *hear_beat_send_thread(void *arg)
             info.type = HEART_BEAT;
             info.heart_beat.src_id = 0;
             info.heart_beat.value = 0;
-
             time_t cur_time;
             get_cur_time(&cur_time);
             if((cur_time - app_info_table[i].last_refresh) >= HEART_BEAT_LOST_TIME){
@@ -158,7 +157,7 @@ void *hear_beat_send_thread(void *arg)
             }
             sleep_ms(5);
         }
-        sleep_ms(HEART_BEAT_TIME*100);
+        sleep_ms(500);
     }
 }
 
@@ -207,14 +206,14 @@ void *handler_thread(void *arg)
             print_app_info_table();
         }else if(info.type == APP_TCP_MSG){
             log_info("======APP_TCP_MSG======\n");
-            int index = find_id_index(info.msg.dst_id);
+            int index = find_id_index(info.tcp_state.dst_id);
             if(index < 0){
-                log_error("can not find id:%d\n", info.msg.dst_id);
+                log_error("can not find id:%d\n", info.tcp_state.dst_id);
                 continue;
             }
             tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, APP_MSG_SIZE);
             log_info("restransmit src_id:%d, dst_id:%d, flag:%d\n",
-                    info.msg.src_id, info.msg.dst_id, info.msg.flag
+                    info.tcp_state.src_id, info.tcp_state.dst_id, info.tcp_state.flag
                     );
             log_info("======APP_TCP_MSG EXIT======\n");
         }else if(info.type == APP_SEND_PACKAGE_REQUEST){
@@ -348,6 +347,16 @@ int main(int argc, char *argv[])
     //     sleep(1);
     // }
     inner_service_deinit();
-    log_info("[inner_service]:ending!\n");
+    log_info("[innr_service]:ending!\n");
     return 0;
 }
+
+// typedef int pority_t;
+
+// tank_status_t package_pority_send(app_package_t package)
+// {
+//     pority_t pority = 0;
+//     pority = get_pority(package);
+//     tank_msgq_pority(package, pority);
+//     return TANK_SUCCESS;
+// }

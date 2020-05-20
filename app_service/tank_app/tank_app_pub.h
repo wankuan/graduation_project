@@ -31,7 +31,6 @@ typedef enum {
     ALL
 }tcp_state_t;
 
-
 /* TCP header flags bits */
 typedef enum{
     TCP_NON = 0x00U,
@@ -130,7 +129,6 @@ typedef struct{
     tank_mm_t           mm_handler;
     tank_msgq_t         *sender;
     tank_msgq_t         *receiver;
-    tank_msgq_t         *recv_package;
     tank_status_t      (*recv_package_cb)(app_package_info_t* info);
 }ta_info_t;
 
