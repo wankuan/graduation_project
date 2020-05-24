@@ -6,18 +6,32 @@
 
 volatile uint32_t g_shm_base = 0u;
 
-
+#ifdef __ANDROID__
+#include <cutils/ashmem.h>
+#endif
 
 tank_status_t tank_creat_shm(void)
 {
+    int fd = -1;
     const char *name = TANK_PUB_NAME;
-    int fd = shm_open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
-    if(fd < 0){
-        perror("creat ERROR");
-        exit(1);
-    }
-    log_info("map_size:%d\n", SHM_SIZE);
-    ftruncate(fd, SHM_SIZE);
+    #ifdef __ANDROID__
+        fd = ashmem_create_region(NULL,SHM_SIZE);
+        if(fd < 0){
+            perror("creat ERROR");
+            exit(1);
+        }
+        log_info("map_size:%d\n", SHM_SIZE);
+    #else
+        fd = shm_open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+        if(fd < 0){
+            perror("creat ERROR");
+            exit(1);
+        }
+        log_info("map_size:%d\n", SHM_SIZE);
+        ftruncate(fd, SHM_SIZE);
+    #endif
+
+
     void *buf = mmap(NULL, SHM_SIZE, PROT_WRITE, MAP_SHARED, fd, 0);
     if (!buf) {
         log_error("mmap failed\n");
