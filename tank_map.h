@@ -4,8 +4,12 @@
 #include "tank_msgq.h"
 #include "my_sem.h"
 
+#ifdef __ANDROID__
+#define TANK_PUB_NAME       ("/data/tank_pub")
+#else
+#define TANK_PUB_NAME       ("/home/wankuan/tank_pub")
+#endif
 
-#define TANK_PUB_NAME       ("/tank_pub")
 #define SHM_SIZE            (uint32_t)(64*1024)
 #define INNER_SWAP_SIZE     (uint32_t)(32*1024)
 #define APP_SIZE            (uint32_t)(16*1024)

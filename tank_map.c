@@ -11,9 +11,9 @@ volatile uint32_t g_shm_base = 0u;
 tank_status_t tank_creat_shm(void)
 {
     const char *name = TANK_PUB_NAME;
-    int fd = shm_open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
+    int fd = open(name, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR);
     if(fd < 0){
-        perror("creat ERROR");
+        perror("creat shm ERROR");
         exit(1);
     }
     log_info("map_size:%d\n", SHM_SIZE);
@@ -35,9 +35,9 @@ tank_status_t tank_creat_shm(void)
 tank_status_t get_shm_base_addr(void)
 {
     const char *name = TANK_PUB_NAME;
-    int fd = shm_open(name, O_RDWR, S_IRUSR|S_IWUSR);
+    int fd = open(name, O_RDWR, S_IRUSR|S_IWUSR);
     if(fd < 0){
-        perror("creat ERROR");
+        perror("get shm ERROR");
         exit(1);
     }
     void *buf = mmap(NULL, SHM_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
