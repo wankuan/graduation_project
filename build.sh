@@ -3,6 +3,8 @@ ANDROID_NDK_PATH=/usr/android_SDK/ndk-bundle
 ANDROID_NDK_LIB_PATH=/usr/android_SDK/ndk-bundle/platforms/android-20/arch-arm64/usr
 
 cur_dir=$(cd `dirname $0`; pwd)
+
+build_platform=$2
 echo ${cur_dir}
 app_running_path=${cur_dir}/app_service/test_case/app_running
 inner_service_path=${cur_dir}/backstage_service/inner_service
@@ -41,18 +43,27 @@ if [ "$1" = 'all' ] ;then
     echo "========BUILD INNER_SERVICE======="
     echo "=================================="
     cd ${inner_service_path}/build
-    cmake\
-      -DCMAKE_BUILD_TYPE=RELEASE\
-      -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_PATH/build/cmake/android.toolchain.cmake \
-      -DANDROID_NDK=$ANDROID_NDK_PATH \
-      -DANDROID_LIB=$ANDROID_NDK_LIB_PATH \
-      -DANDROID_TOOLCHAIN=clang\
-      -DANDROID_ABI=armeabi-v7a \
-      -DANDROID_PLATFORM=android-19 \
-      -DANDROID_STL=c++_static\
-      ..
-    make
-
+    if [ "${build_platform}" = "android" ];then
+        echo "========ANDROID==============="
+        cmake\
+        -DCMAKE_BUILD_TYPE=RELEASE\
+        -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_PATH/build/cmake/android.toolchain.cmake \
+        -DANDROID_NDK=$ANDROID_NDK_PATH \
+        -DANDROID_LIB=$ANDROID_NDK_LIB_PATH \
+        -DANDROID_TOOLCHAIN=clang\
+        -DANDROID_ABI=armeabi-v7a \
+        -DANDROID_PLATFORM=android-19 \
+        -DANDROID_STL=c++_static\
+        -DRUN_PLATFORM=ANDROID\
+        ..
+        make
+    else
+        echo "========LINUX==============="
+        cmake\
+        -DRUN_PLATFORM=LINUX\
+        ..
+        make
+    fi
 elif [ "$1" = 'clean' ];then
     cd ${app_running_path}/build
     make clean
