@@ -1,15 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 project(inner_service)
 
-# IF (${CMAKE_BUILD_TYPE} STREQUAL "DEBUG")
-#     message( STATUS "==============================debug==============================" )
-#     ADD_DEFINITIONS(-DDEBUG)
-# ELSEIF(${CMAKE_BUILD_TYPE} STREQUAL "RELEASE")
-#     message( STATUS "==============================release==============================" )
-# ELSE()
-#     message( STATUS "===============================error-build-type=====================")
-# ENDIF ()
-
 message("=====${RUN_PLATFORM}")
 
 IF (${RUN_PLATFORM} STREQUAL "ANDROID")
@@ -25,14 +16,6 @@ ELSEIF(${RUN_PLATFORM} STREQUAL "LINUX")
     set(CMAKE_C_COMPILER gcc)
 ENDIF()
 
-
-#SET(CMAKE_CXX_FLAGS "-std=gnu++11 -Wall -fPIC -Wl,-Bsymbolic -lm -D__STDINT_LIMITS -D__STDINT_MACROS -D__ANDROID__ -DANDROID")
-
-
-
-# set(CMAKE_C_COMPILER gcc)
-# set(CMAKE_OBJCOPY arm-none-eabi-objcopy)
-# set(CMAKE_SIZE arm-none-eabi-size)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11 -Wall -fdata-sections -ffunction-sections -g -m32 -fno-stack-protector")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -fdata-sections -ffunction-sections -g -m32 -fno-stack-protector")
 
