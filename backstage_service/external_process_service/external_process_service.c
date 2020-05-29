@@ -8,6 +8,7 @@
 
 const char *send_str = "test_write_into_uart\n";
 
+
 tank_status_t uart_recv_handler(void *buf, uint16_t *len)
 {
     char *recv_str = (char*)buf;
@@ -30,8 +31,8 @@ int main(int argc, char *argv[])
     while(1){
         // hal_uart_send(send_str, strlen(send_str));
         // // log_info("============entry running!============\n");
-        // sleep_ms(1000);
-        hal_uart_read();
+        sleep_ms(1000);
+        // hal_uart_read();
     }
     return 0;
 }
