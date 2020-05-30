@@ -13,7 +13,7 @@ typedef tank_status_t (*uart_recv_cb_t)(void *buf, uint16_t *len);
 
 tank_status_t hal_uart_init(const char *device_name, uart_recv_cb_t cb);
 
-int hal_uart_send(char *data, int datalen);
+int hal_uart_send(uint8_t *data, int datalen);
 tank_status_t hal_uart_read(void);
 
 

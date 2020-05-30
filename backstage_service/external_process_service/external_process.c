@@ -29,7 +29,7 @@ void *external_process_recv_thread(void *arg)
         external_process_recv_all(handler);
         // tank_app_recv_all(ta);
         // log_info("recv_thread running!\n");
-        // sleep_ms(1000);
+        sleep_ms(1000);
     }
 }
 
@@ -104,7 +104,7 @@ tank_status_t external_service_init(external_process_info_t *handler)
     handler->recv_thread = external_process_recv_thread;
     handler->send_thread = external_process_send_thread;
 
-    handler->id = 0;
+    handler->id = 1;
 
     handler->recv_package_cb = external_process_recv_package_callback;
     snprintf(handler->name, 32, "external_process");

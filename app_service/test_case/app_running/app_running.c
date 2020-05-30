@@ -81,8 +81,8 @@ int main(int argc, char *argv[])
                     PORT_FILE|PORT_SHELL
                     );
             log_info("========logger start===========\n");
-            tank_app_creat(&app_demo, src_id, 0, 0, RECV_ASYNC);
-            tank_app_creat(&app_demo2, 2, 0, 0, RECV_SYNC);
+            tank_app_creat(&app_demo, 2, 0, 0, RECV_ASYNC);
+            tank_app_creat(&app_demo2, 3, 0, 0, RECV_SYNC);
             for(int i=0;i<10;++i){
                 if(i != app_demo.id){
                     tank_app_listen(&app_demo, i);
