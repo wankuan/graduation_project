@@ -33,6 +33,8 @@ SET(SRCS
     ./../../../tank_components/tank_log/tank_log_api.c
     ./../../../tank_components/tank_log/tank_log.c
     ./../../../tank_components/delay/tank_delay.c
+    ./../../../tank_components/bsp/uart/uart.c
+
 )
 
 include_directories(
@@ -47,6 +49,7 @@ include_directories(
     ./../../
     ./../../../tank_components/tank_log/
     ./../../../tank_components/delay/
+    ./../../../tank_components/bsp/uart
     ${ANDROID_SDK_INC}
     ${ANDROID_LIB}
 )

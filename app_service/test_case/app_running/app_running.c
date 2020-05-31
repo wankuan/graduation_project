@@ -8,7 +8,7 @@
 #include "tank_log.h"
 #include "tank_delay.h"
 #include "tank_app_api.h"
-
+#include "uart.h"
 
 ta_info_t app_demo;
 ta_info_t app_demo2;
@@ -45,6 +45,17 @@ tank_status_t tank_app_recv_package_callback(app_package_info_t* info)
 }
 
 int count = 0;
+
+
+tank_status_t app_service_recv_handler(void *buf, uint16_t *len)
+{
+    log_info("recv data is ======, len is %d\n", *len);
+    for(uint16_t i=0;i<*len;++i){
+        printf("0x%x ", *((uint8_t*)buf+i));
+    }
+    printf("\n");
+    return TANK_SUCCESS;
+}
 int main(int argc, char *argv[])
 {
     // pthread_t pid;
@@ -61,6 +72,10 @@ int main(int argc, char *argv[])
             log_info("========logger start===========\n");
             log_info("sender\n");
             tank_app_creat(&app_demo, src_id, 0, 0, RECV_SYNC);
+            if(dst_id == 1){
+                tank_app_uart_client(&app_demo, 1);
+                hal_uart_init("/dev/ttyUSB0", app_service_recv_handler);
+            }
             // for(int i=0;i<10;++i){
             //     if(i != app_demo.id){
             //         tank_app_listen(&app_demo, i);
@@ -69,8 +84,19 @@ int main(int argc, char *argv[])
 
             while(1){
                 static uint32_t num = 0;
-                log_info("============send a msg num:%d============\n", num);
-                ta_send_package(&app_demo, dst_id, &num, sizeof(num), 0);
+                if(dst_id == 1){
+                    log_info("externel app! retransimit\n");
+                    log_info("num is %x\n", num);
+                    uint8_t send_buf[1000]={0};
+                    send_buf[0] = 0XFE;
+                    memcpy(&send_buf[1], &num, 4);
+                    send_buf[5] = 0XEF;
+                    hal_uart_send(send_buf, 6);
+                }else{
+                    log_info("============send a msg num:%d============\n", num);
+                    ta_send_package(&app_demo, dst_id, &num, sizeof(num), 0);
+                }
+
                 sleep_ms(1000);
                 num += 1;
             }

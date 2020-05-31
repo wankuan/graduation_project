@@ -7,7 +7,7 @@
 #include "tank_request.h"
 #include "inner_service.h"
 #include "tank_delay.h"
-
+#include "uart.h"
 
 #include "tank_log_api.h"
 #define FILE_NAME "inner_service"
@@ -272,16 +272,26 @@ void *handler_thread(void *arg)
             info.recv_package_push.package_id = package_info->package_id;
             info.recv_package_push.addr_shift = package_info->addr_shift;
             info.recv_package_push.size = package_info->size;
-            tank_id_t index =  find_id_index(info.recv_package_push.dst_id);
-            if(tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE) == TANK_FAIL){
-                log_error("package: 4th restransmit error\n");
-                continue;
+            if(info.recv_package_push.dst_id == 1){
+                log_info("externel app! retransimit\n");
+                uint8_t send_buf[1000]={0};
+                send_buf[0] = 0XFE;
+                memcpy(&send_buf[1], (void*)(info.recv_package_push.addr_shift +g_shm_base), info.recv_package_push.size);
+                send_buf[info.recv_package_push.size+1] = 0XEF;
+                hal_uart_send(send_buf, info.recv_package_push.size + 2);
+            }else{
+                tank_id_t index =  find_id_index(info.recv_package_push.dst_id);
+                if(tank_msgq_send((tank_msgq_t*)app_info_table[index].msgq_recv_addr, &info, TANK_MSG_NORMAL_SIZE) == TANK_FAIL){
+                    log_error("package: 4th restransmit error\n");
+                    continue;
+                }
+                log_info("package: 4th restransmit package\n");
+                log_info("src_id:%d, dst_id:%d, package_id:%d\n",
+                            info.recv_package_push.src_id,
+                            info.recv_package_push.dst_id,
+                            info.recv_package_push.package_id);
             }
-            log_info("package: 4th restransmit package\n");
-            log_info("src_id:%d, dst_id:%d, package_id:%d\n",
-                        info.recv_package_push.src_id,
-                        info.recv_package_push.dst_id,
-                        info.recv_package_push.package_id);
+
 
         }else if(info.type == APP_GET_PACKAGE_ACK){
             log_info("package: 5th get recevier finished ACK\n");
@@ -337,6 +347,7 @@ int main(int argc, char *argv[])
                 PORT_FILE|PORT_SHELL
                 );
     log_info("========logger start===========\n");
+
 
     inner_service_init();
     pthread_create(&pid, NULL, &hear_beat_send_thread, NULL);

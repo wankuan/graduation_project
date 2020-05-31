@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
         log_info("========logger start===========\n");
         hal_uart_init("/dev/ttyUSB0", uart_recv_handler);
         while(1){
-            // hal_uart_send(send_str, UART_TEST_FRAME);
+            hal_uart_send(send_str, UART_TEST_FRAME);
             printf("sleep\n");
             sleep_ms(1000);
         }
@@ -41,9 +41,9 @@ int main(int argc, char *argv[])
         log_info("========logger start===========\n");
         hal_uart_init("/dev/ttyUSB1", uart_recv_handler);
         while(1){
-            hal_uart_send(send_str, UART_TEST_FRAME);
+            // hal_uart_send(send_str, UART_TEST_FRAME);
             // printf("sleep\n");
-            sleep_ms(100);
+            sleep_ms(1000);
         }
     }
     return 0;

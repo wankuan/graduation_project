@@ -243,6 +243,13 @@ tank_status_t tank_app_listen(ta_info_t *ta, tank_id_t id)
     return TANK_SUCCESS;
 }
 
+tank_status_t tank_app_uart_client(ta_info_t *ta, tank_id_t id)
+{
+    creat_ta_id(ta, id);
+    write_tcp_state(ta, id, LISTEN);
+    return TANK_SUCCESS;
+}
+
 tank_status_t check_ta_id_exist(ta_info_t *ta, tank_id_t id)
 {
     for(int i=0; i<ta->id_cur_index; i++){
