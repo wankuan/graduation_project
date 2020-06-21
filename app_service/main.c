@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     // for(uint16_t i = 0; i<TEST_SIZE; i++){
     //     msg_send_test_buf[i]=(char*)malloc(256);
     //     snprintf(msg_send_test_buf[i],256,"%s_%d",msg_send,i);
-    //     tank_app_send(&APP, (const uint8_t*)(msg_send_test_buf[i]), (strlen(msg_send_test_buf[i])+sizeof("")));
+    //     tank_app_send_msg(&APP, (const uint8_t*)(msg_send_test_buf[i]), (strlen(msg_send_test_buf[i])+sizeof("")));
     // }
     // for(uint16_t i = 0; i<TEST_SIZE; i++){
     //     free(msg_send_test_buf[i]);
